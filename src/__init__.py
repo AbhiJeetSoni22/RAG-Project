@@ -32,6 +32,12 @@ from src.qa_engine import (
     QAError,
 )
 
+from src.semantic_retriever import (
+    SemanticRetriever,
+    retrieve_semantic_chunks,
+    SemanticRetrievalError,
+)
+
 __all__ = [
     # Phase 1: PDF extraction & preprocessing
     "extract_text_from_pdf",
@@ -61,4 +67,8 @@ __all__ = [
     "ExtractiveQAEngine",
     "answer_question",
     "QAError",
+    # Phase 5: Semantic Retrieval Enhancement
+    "SemanticRetriever",
+    "retrieve_semantic_chunks",
+    "SemanticRetrievalError",
 ]

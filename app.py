@@ -34,10 +34,37 @@ from src.qa_engine import (
     ExtractiveQAEngine,
     QAError,
 )
+from src.semantic_retriever import (
+    SemanticRetriever,
+    get_sentence_transformer,
+    SemanticRetrievalError,
+    DEFAULT_MODEL_NAME,
+)
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+
+@st.cache_resource(show_spinner=False)
+def load_cached_transformer(model_name: str = DEFAULT_MODEL_NAME):
+    """Load and cache the SentenceTransformer model once across user sessions."""
+    return get_sentence_transformer(model_name)
+
+
+@st.cache_data(show_spinner=False)
+def get_cached_chunk_embeddings(_model, chunk_texts: tuple[str, ...]):
+    """Generate and cache normalized dense embeddings for document chunks.
+
+    Only recomputes when chunk text contents change. Subsequent question
+    searches instantly reuse this cached embedding matrix.
+    """
+    return _model.encode(
+        list(chunk_texts),
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        show_progress_bar=False,
+    )
 
 # Configure Streamlit page
 st.set_page_config(
@@ -340,15 +367,15 @@ st.markdown(
 
 def render_header() -> None:
     """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 4 &bull; Extractive Question Answering</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge-phase">Phase 5 &bull; Semantic Retrieval & Extractive QA</span>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Upload a PDF, retrieve relevant passages via TF-IDF, and extract grounded factual answers with exact page citations.</div>',
+        '<div class="sub-title">Upload a PDF, retrieve relevant passages via Semantic Embeddings (Sentence Transformers) or Lexical TF-IDF, and extract grounded factual answers with exact page citations.</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_sidebar() -> tuple[int, int, int, float, int]:
+def render_sidebar() -> tuple[int, int, str, int, float, int]:
     """Render sidebar controls for configurable chunking, retrieval, and QA parameters."""
     with st.sidebar:
         st.markdown("### ⚙️ Engine Configuration")
@@ -375,7 +402,15 @@ def render_sidebar() -> tuple[int, int, int, float, int]:
         )
 
         st.markdown("---")
-        st.markdown("#### 🔍 Phase 3: Retrieval")
+        st.markdown("#### 🔍 Phase 3 & 5: Retrieval")
+        retrieval_method = st.radio(
+            "Retrieval Method",
+            options=["Semantic Embeddings", "TF-IDF"],
+            index=0,
+            help="Select the retrieval algorithm: Semantic Embeddings (Sentence Transformers all-MiniLM-L6-v2) or Lexical TF-IDF + Cosine Similarity.",
+            key="cfg_retrieval_method",
+        )
+
         top_k = st.slider(
             "Top-K Retrieved Passages",
             min_value=1,
@@ -414,17 +449,18 @@ def render_sidebar() -> tuple[int, int, int, float, int]:
             """
             * **Strategy:** Extractive / Retrieval-grounded
             * **Principle:** Retrieve first $\\rightarrow$ Answer only from evidence
+            * **Retriever:** Semantic Embeddings or TF-IDF
             * **Safety:** Never answers if no evidence exists in the document
             * **No LLM / Hallucinations:** 100% deterministic NLP extraction
             """
         )
 
-    return chunk_size, chunk_overlap, top_k, min_similarity, max_sentences
+    return chunk_size, chunk_overlap, retrieval_method, top_k, min_similarity, max_sentences
 
 
 def main() -> None:
     """Main application loop."""
-    chunk_size, chunk_overlap, top_k, min_similarity, max_sentences = render_sidebar()
+    chunk_size, chunk_overlap, retrieval_method, top_k, min_similarity, max_sentences = render_sidebar()
     render_header()
 
     # Upload Section
@@ -503,17 +539,29 @@ def main() -> None:
         st.error(f"❌ An unexpected error occurred during chunking: {exc}")
         return
 
-    # Phase 3: Fit TF-IDF Retriever on Chunk Collection
+    # Phase 3 & Phase 5: Index Document Chunks for TF-IDF and Semantic Retrieval
     try:
-        with st.spinner("Step 3: Indexing document chunks into TF-IDF vector space..."):
-            retriever = TFIDFRetriever(chunks)
-    except RetrievalError as r_err:
+        with st.spinner("Step 3: Indexing document chunks for TF-IDF and Semantic retrieval..."):
+            tfidf_retriever = TFIDFRetriever(chunks)
+
+            # Initialize Semantic Retriever with cached SentenceTransformer and cached embeddings
+            transformer_model = load_cached_transformer()
+            chunk_texts_tuple = tuple(
+                (c.get("original_text") or c.get("cleaned_text", "")).strip() for c in chunks
+            )
+            cached_chunk_embs = get_cached_chunk_embeddings(transformer_model, chunk_texts_tuple)
+            semantic_retriever = SemanticRetriever(
+                chunks=chunks,
+                model=transformer_model,
+                chunk_embeddings=cached_chunk_embs,
+            )
+    except (RetrievalError, SemanticRetrievalError) as r_err:
         logger.error(f"Retriever initialization error: {r_err}", exc_info=True)
         st.error(f"❌ Retrieval Engine Error: {r_err}")
         return
     except Exception as exc:
         logger.error(f"Unexpected retriever error: {exc}", exc_info=True)
-        st.error(f"❌ Failed to build TF-IDF retriever: {exc}")
+        st.error(f"❌ Failed to build retrieval engines: {exc}")
         return
 
     # Phase 4: Initialize QA Engine
@@ -536,6 +584,7 @@ def main() -> None:
                 <div class="status-item"><span class="status-check">✓</span> Stop-word removal completed</div>
                 <div class="status-item"><span class="status-check">✓</span> Text chunking completed ({len(chunks)} chunks)</div>
                 <div class="status-item"><span class="status-check">✓</span> TF-IDF vectorizer indexed ({len(chunks)} passages)</div>
+                <div class="status-item"><span class="status-check">✓</span> Semantic embeddings indexed ({len(chunks)} passages &bull; all-MiniLM-L6-v2)</div>
                 <div class="status-item"><span class="status-check">✓</span> <b>Extractive QA Engine ready</b></div>
             </div>
             """,
@@ -584,17 +633,27 @@ def main() -> None:
     st.markdown("## 🤖 Question Answering")
     st.caption("Ask questions about the uploaded document. The system retrieves relevant passages and extracts factual answers strictly grounded in the document evidence.")
 
-    col_query, col_btn = st.columns([5, 1])
+    col_method, col_query, col_btn = st.columns([2, 4, 1])
+
+    with col_method:
+        selected_method = st.selectbox(
+            "Retrieval Method",
+            options=["Semantic Embeddings", "TF-IDF"],
+            index=0 if retrieval_method == "Semantic Embeddings" else 1,
+            help="Choose which retrieval engine provides candidate passages to the extractive QA engine.",
+            key="qa_retrieval_method_select",
+        )
 
     with col_query:
         query_input = st.text_input(
             "Enter your question:",
-            placeholder="e.g. What is Natural Language Processing? Or: What are the attendance requirements?",
+            placeholder="e.g. How much attendance is required? Or: What is Natural Language Processing?",
             key="user_qa_question_input",
-            label_visibility="collapsed",
         )
 
     with col_btn:
+        st.write("")
+        st.write("")
         search_clicked = st.button("💬 Ask Question", type="primary", use_container_width=True)
 
     # Retrieval & QA Pipeline Execution
@@ -605,9 +664,16 @@ def main() -> None:
         if not cleaned_q or not any(c.isalnum() for c in cleaned_q):
             st.warning("⚠️ Please enter a question containing valid words or alphanumeric keywords.")
         else:
-            with st.spinner("Retrieving relevant passages and extracting grounded answer..."):
-                # Phase 3: Retrieve top-k chunks
-                retrieved_results = retriever.search(
+            with st.spinner(f"Retrieving passages via {selected_method} and extracting grounded answer..."):
+                # Select active retriever
+                active_retriever = (
+                    semantic_retriever
+                    if selected_method == "Semantic Embeddings"
+                    else tfidf_retriever
+                )
+
+                # Retrieve top-k chunks
+                retrieved_results = active_retriever.search(
                     query=cleaned_q,
                     top_k=top_k,
                     min_similarity=min_similarity,
@@ -640,6 +706,7 @@ def main() -> None:
                     f"""
                     <div class="source-container">
                         <span style="font-weight: 700; font-size: 0.82rem; color: #475569; text-transform: uppercase;">Source Attribution:</span>
+                        <span class="meta-tag"><b>Retrieval Method:</b> {selected_method}</span>
                         <span class="meta-tag"><b>Document:</b> {qa_result['source']}</span>
                         <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
                         <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
@@ -678,21 +745,21 @@ def main() -> None:
                 )
 
             # =================================================================
-            # Requirement 14: Top Retrieved Passages Section
+            # Requirement 14 & Phase 5: Top Retrieved Passages Section
             # =================================================================
-            with st.expander("🔍 Top Retrieved Passages (Phase 3 Retrieval Candidates)", expanded=False):
+            with st.expander(f"🔍 Top Retrieved Passages ({selected_method})", expanded=False):
                 st.caption(
-                    "Inspect all candidate passages retrieved by the Phase 3 TF-IDF engine that were analyzed by the QA engine."
+                    f"Inspect all candidate passages retrieved by {selected_method} that were analyzed by the QA engine."
                 )
 
                 if not retrieved_results:
-                    st.info("ℹ️ No passages met the minimum similarity threshold.")
+                    st.info(f"ℹ️ No passages met the minimum similarity threshold ({min_similarity:.2f}).")
                 else:
                     for rank, res in enumerate(retrieved_results, start=1):
                         score = res["similarity_score"]
                         pct_str = f"{score * 100:.2f}%"
 
-                        if score >= 0.40:
+                        if score >= 0.45:
                             sim_class = "similarity-high"
                         elif score >= 0.15:
                             sim_class = "similarity-med"
@@ -704,10 +771,11 @@ def main() -> None:
                             <div class="result-card">
                                 <div class="result-header">
                                     <span class="rank-pill">Rank #{rank}</span>
-                                    <span class="similarity-pill {sim_class}">Similarity: {pct_str}</span>
-                                    <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                    <span class="similarity-pill {sim_class}">Similarity: {score:.4f} ({pct_str})</span>
                                     <span class="meta-tag"><b>Page:</b> {res['page']}</span>
-                                    <span class="meta-tag"><b>Chars:</b> {res['char_count']}</span>
+                                    <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                    <span class="meta-tag"><b>Source:</b> {res.get('source', '')}</span>
+                                    <span class="meta-tag"><b>Chars:</b> {res.get('char_count', len(res['original_text']))}</span>
                                 </div>
                                 <div class="passage-box">{res['original_text']}</div>
                             </div>
