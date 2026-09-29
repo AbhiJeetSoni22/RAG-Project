@@ -1,7 +1,8 @@
-"""Streamlit application for Retrieval Based Question Answering (Phases 1 & 2).
+"""Streamlit application for Retrieval Based Question Answering (Phases 1, 2 & 3).
 
 Phase 1: Document Ingestion & Text Preprocessing
 Phase 2: Text Chunking & Retrieval Data Preparation
+Phase 3: Retrieval Engine (TF-IDF + Cosine Similarity)
 """
 
 from __future__ import annotations
@@ -24,6 +25,10 @@ from src.chunker import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_CHUNK_OVERLAP,
 )
+from src.retriever import (
+    TFIDFRetriever,
+    RetrievalError,
+)
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -32,7 +37,7 @@ logger = logging.getLogger(__name__)
 # Configure Streamlit page
 st.set_page_config(
     page_title="Retrieval Based Question Answering",
-    page_icon="📄",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -52,19 +57,19 @@ st.markdown(
         font-weight: 700;
         letter-spacing: -0.02em;
         margin-bottom: 0.25rem;
-        color: #1e293b;
+        color: #0f172a;
     }
 
     .sub-title {
         font-size: 1.05rem;
-        color: #64748b;
+        color: #475569;
         margin-bottom: 1.5rem;
         font-weight: 400;
     }
 
     .badge-phase {
         display: inline-block;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
         font-size: 0.75rem;
         font-weight: 600;
@@ -139,6 +144,87 @@ st.markdown(
         color: #0f172a;
     }
 
+    /* Result Card Styling */
+    .result-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        padding: 1.15rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .result-card:hover {
+        border-color: #94a3b8;
+        box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.08);
+    }
+
+    .result-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .rank-pill {
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+    }
+
+    .similarity-pill {
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+    }
+
+    .similarity-high {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+
+    .similarity-med {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+    }
+
+    .similarity-low {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+
+    .meta-tag {
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.375rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .passage-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #3b82f6;
+        border-radius: 0.5rem;
+        padding: 0.95rem 1.15rem;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        color: #1e293b;
+        margin-top: 0.5rem;
+        white-space: pre-wrap;
+    }
+
     .chunk-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -176,31 +262,14 @@ st.markdown(
         border-radius: 0.375rem;
     }
 
-    .token-chip-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-        max-height: 220px;
-        overflow-y: auto;
-        padding: 0.75rem;
-        background: #f8fafc;
-        border-radius: 0.5rem;
-        border: 1px solid #e2e8f0;
-    }
-
-    .token-chip {
-        display: inline-block;
-        background: #e2e8f0;
-        color: #1e293b;
-        font-size: 0.8rem;
-        font-family: 'Fira Code', monospace;
-        padding: 0.2rem 0.5rem;
-        border-radius: 0.375rem;
-    }
-
-    .token-chip.filtered {
-        background: #dbeafe;
-        color: #1e40af;
+    .info-callout {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 0.65rem;
+        padding: 0.85rem 1.1rem;
+        color: #166534;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
     }
     </style>
     """,
@@ -210,20 +279,20 @@ st.markdown(
 
 def render_header() -> None:
     """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 2 &bull; Text Chunking & Retrieval Data Preparation</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge-phase">Phase 3 &bull; Retrieval Engine (TF-IDF + Cosine Similarity)</span>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Upload a PDF, extract page-level text, and partition it into retrieval-ready semantic chunks.</div>',
+        '<div class="sub-title">Upload a PDF, partition it into semantic chunks, and retrieve the most relevant passages using TF-IDF and Cosine Similarity.</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_sidebar() -> tuple[int, int]:
-    """Render sidebar controls for configurable chunking parameters."""
+def render_sidebar() -> tuple[int, int, int, float]:
+    """Render sidebar controls for configurable chunking and retrieval parameters."""
     with st.sidebar:
-        st.markdown("### ⚙️ Chunking Configuration")
-        st.caption("Configure chunk size and overlap parameters for the Phase 2 chunking engine.")
+        st.markdown("### ⚙️ Engine Configuration")
 
+        st.markdown("#### 🧩 Phase 2: Chunking")
         chunk_size = st.slider(
             "Chunk Size (characters)",
             min_value=100,
@@ -231,6 +300,7 @@ def render_sidebar() -> tuple[int, int]:
             value=DEFAULT_CHUNK_SIZE,
             step=50,
             help="Target maximum character length per chunk. Paragraphs larger than this will be split by sentence boundaries.",
+            key="cfg_chunk_size",
         )
 
         chunk_overlap = st.slider(
@@ -240,24 +310,49 @@ def render_sidebar() -> tuple[int, int]:
             value=min(DEFAULT_CHUNK_OVERLAP, chunk_size // 5),
             step=10,
             help="Number of characters carried over from the end of a chunk into the start of the next chunk to preserve context at boundaries.",
+            key="cfg_chunk_overlap",
         )
 
         st.markdown("---")
-        st.markdown("#### ℹ️ About Parameters")
+        st.markdown("#### 🔍 Phase 3: Retrieval")
+        top_k = st.slider(
+            "Top-K Results",
+            min_value=1,
+            max_value=10,
+            value=5,
+            step=1,
+            help="Maximum number of relevant passages to retrieve.",
+            key="cfg_top_k",
+        )
+
+        min_similarity = st.slider(
+            "Minimum Similarity Threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.10,
+            step=0.05,
+            help="Chunks with cosine similarity below this threshold will be excluded as non-relevant.",
+            key="cfg_min_similarity",
+        )
+
+        st.markdown("---")
+        st.markdown("#### ℹ️ Retrieval Method")
         st.markdown(
             """
-            * **Chunk Size:** Controls the granularity of retrieved passages.
-            * **Chunk Overlap:** Prevents information loss near chunk boundaries.
-            * **Hierarchy:** Paragraph $\\rightarrow$ Sentence $\\rightarrow$ Word boundaries.
+            * **Method:** TF-IDF + Cosine Similarity
+            * **Corpus:** Phase 2 cleaned text chunks
+            * **Metric:** Cosine angle $[0.0, 1.0]$
+            * **Display:** Raw `original_text` passage
+            * *Higher score = stronger lexical match*
             """
         )
 
-    return chunk_size, chunk_overlap
+    return chunk_size, chunk_overlap, top_k, min_similarity
 
 
 def main() -> None:
     """Main application loop."""
-    chunk_size, chunk_overlap = render_sidebar()
+    chunk_size, chunk_overlap, top_k, min_similarity = render_sidebar()
     render_header()
 
     # Upload Section
@@ -265,11 +360,11 @@ def main() -> None:
     uploaded_file = st.file_uploader(
         "Choose a PDF file",
         type=["pdf"],
-        help="Upload a PDF file to extract, clean, tokenize, and chunk its content.",
+        help="Upload a PDF file to extract, clean, tokenize, chunk, and search its content.",
     )
 
     if uploaded_file is None:
-        st.info("👋 Please upload a PDF document above to start ingestion and chunking.")
+        st.info("👋 Please upload a PDF document above to start document ingestion and question retrieval.")
         return
 
     # Check for empty file upload (0 bytes)
@@ -336,6 +431,19 @@ def main() -> None:
         st.error(f"❌ An unexpected error occurred during chunking: {exc}")
         return
 
+    # Phase 3: Fit TF-IDF Retriever on Chunk Collection
+    try:
+        with st.spinner("Step 3: Indexing document chunks into TF-IDF vector space..."):
+            retriever = TFIDFRetriever(chunks)
+    except RetrievalError as r_err:
+        logger.error(f"Retriever initialization error: {r_err}", exc_info=True)
+        st.error(f"❌ Retrieval Engine Error: {r_err}")
+        return
+    except Exception as exc:
+        logger.error(f"Unexpected retriever error: {exc}", exc_info=True)
+        st.error(f"❌ Failed to build TF-IDF retriever: {exc}")
+        return
+
     st.markdown("---")
 
     # Layout: Status Checklist & Document Information
@@ -351,8 +459,8 @@ def main() -> None:
                 <div class="status-item"><span class="status-check">✓</span> Text cleaned & normalized</div>
                 <div class="status-item"><span class="status-check">✓</span> Tokenization completed</div>
                 <div class="status-item"><span class="status-check">✓</span> Stop-word removal completed</div>
-                <div class="status-item"><span class="status-check">✓</span> <b>Text chunking completed ({len(chunks)} chunks)</b></div>
-                <div class="status-item"><span class="status-check">✓</span> Chunk metadata verified</div>
+                <div class="status-item"><span class="status-check">✓</span> Text chunking completed ({len(chunks)} chunks)</div>
+                <div class="status-item"><span class="status-check">✓</span> <b>TF-IDF vectorizer indexed ({len(chunks)} passages)</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -384,15 +492,118 @@ def main() -> None:
                     <div class="metric-val">{doc_stats["total_tokens"]:,}</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">Total Chunks</div>
-                    <div class="metric-val" style="color: #2563eb;">{chunk_stats["total_chunks"]}</div>
+                    <div class="metric-label">Indexed Chunks</div>
+                    <div class="metric-val" style="color: #059669;">{chunk_stats["total_chunks"]}</div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    # Section: Document Chunking Statistics (Requirement 11 & 12)
+    st.markdown("---")
+
+    # =========================================================================
+    # PHASE 3: QUESTION RETRIEVAL SECTION
+    # =========================================================================
+    st.markdown("## 🔍 Ask a Question")
+    st.caption("Ask questions about the uploaded document. The retrieval engine computes TF-IDF vectors and ranks relevant passages using Cosine Similarity.")
+
+    # Form or controls for query input
+    col_query, col_btn = st.columns([5, 1])
+
+    with col_query:
+        query_input = st.text_input(
+            "Enter your question:",
+            placeholder="e.g. What is Natural Language Processing? Or: How does tokenization work?",
+            key="user_question_input",
+            label_visibility="collapsed",
+        )
+
+    with col_btn:
+        search_clicked = st.button("🔎 Search", type="primary", use_container_width=True)
+
+    # Retrieval Explanation (Requirement 14)
+    with st.expander("ℹ️ How Retrieval Works (TF-IDF + Cosine Similarity)", expanded=False):
+        st.markdown(
+            """
+            * **Retrieval Method:** **TF-IDF + Cosine Similarity**
+            * **Question Preprocessing:** The question is cleaned and normalized using the same pipeline as the document chunks.
+            * **Vector Space:** The question is projected into the pre-fitted TF-IDF vector space of the document corpus.
+            * **Ranking:** Cosine similarity measures the angular alignment between question and chunk vectors ($0.0 \\le \\text{score} \\le 1.0$).
+            * **Relevance:** *Higher similarity = stronger lexical relevance.* Chunks below the minimum threshold are excluded.
+            * **Evidence Display:** Retrieved evidence is strictly presented using the original text (`original_text`).
+            """
+        )
+
+    # Execute Search when query is submitted or button clicked
+    if query_input:
+        cleaned_q = query_input.strip()
+
+        # Handle empty / whitespace query (Requirement 10)
+        if not cleaned_q or not any(c.isalnum() for c in cleaned_q):
+            st.warning("⚠️ Please enter a question containing valid words or alphanumeric keywords.")
+        else:
+            with st.spinner("Searching document for relevant passages..."):
+                retrieved_results = retriever.search(
+                    query=cleaned_q,
+                    top_k=top_k,
+                    min_similarity=min_similarity,
+                )
+
+            st.markdown("### 🎯 Retrieval Results")
+
+            # Handle no-match below threshold (Requirement 8 & 9)
+            if not retrieved_results:
+                st.info("ℹ️ **No sufficiently relevant information was found in this document.**")
+                st.caption(
+                    f"No passages met the minimum similarity threshold of **{min_similarity:.2f}**. "
+                    "Try rephrasing your question or lowering the Minimum Similarity threshold in the sidebar."
+                )
+            else:
+                st.success(
+                    f"✓ Retrieved **{len(retrieved_results)}** relevant passage(s) "
+                    f"(Top-K: {top_k} | Min Similarity: {min_similarity:.2f})"
+                )
+
+                for rank, res in enumerate(retrieved_results, start=1):
+                    score = res["similarity_score"]
+                    pct_str = f"{score * 100:.2f}%"
+
+                    # Determine pill badge color based on score magnitude
+                    if score >= 0.40:
+                        sim_class = "similarity-high"
+                    elif score >= 0.15:
+                        sim_class = "similarity-med"
+                    else:
+                        sim_class = "similarity-low"
+
+                    st.markdown(
+                        f"""
+                        <div class="result-card">
+                            <div class="result-header">
+                                <span class="rank-pill">Rank #{rank}</span>
+                                <span class="similarity-pill {sim_class}">Similarity: {pct_str}</span>
+                                <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                <span class="meta-tag"><b>Source:</b> {res['source']}</span>
+                                <span class="meta-tag"><b>Page:</b> {res['page']}</span>
+                                <span class="meta-tag"><b>Chars:</b> {res['char_count']}</span>
+                                <span class="meta-tag"><b>Words:</b> {res['word_count']}</span>
+                            </div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.5rem;">
+                                📄 Original Retrieved Passage (Ground Truth Evidence):
+                            </div>
+                            <div class="passage-box">{res['original_text']}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # =========================================================================
+    # PHASE 2: DOCUMENT CHUNKING SECTION (Maintained for complete inspection)
+    # =========================================================================
     st.markdown("## 🧩 Document Chunking")
     st.success(
         f"✓ Document processed &bull; ✓ Text chunking completed &bull; **{len(chunks)} chunks created** "
@@ -432,7 +643,7 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    # Requirement 13: Chunk Preview (First 5 chunks)
+    # Chunk Preview (First 5 chunks)
     preview_count = min(5, len(chunks))
     if preview_count > 0:
         st.markdown(f"#### 🔍 Chunk Preview (First {preview_count} Chunks)")
@@ -455,8 +666,8 @@ def main() -> None:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Requirement 12: View Chunks Expandable Section with Pagination
-    with st.expander("📑 View Chunks", expanded=True):
+    # View Chunks Expandable Section with Pagination
+    with st.expander("📑 View Chunks", expanded=False):
         st.caption(
             "Inspect individual chunk contents and metadata. Both original text (for user-facing display) "
             "and cleaned text (for Phase 3 retrieval/vectorization) are preserved."
@@ -465,7 +676,6 @@ def main() -> None:
         if not chunks:
             st.info("ℹ️ No chunks were generated from this document.")
         else:
-            # Controls: filter by page or chunk pagination
             col_filter, col_page = st.columns([1, 1])
 
             with col_filter:
@@ -477,7 +687,6 @@ def main() -> None:
                 sel_page_num = int(selected_filter.replace("Page ", ""))
                 filtered_chunks = [c for c in chunks if c["page"] == sel_page_num]
 
-            # Pagination controls
             chunks_per_view = 5
             total_filtered = len(filtered_chunks)
             total_pages_view = max(1, (total_filtered + chunks_per_view - 1) // chunks_per_view)
@@ -548,7 +757,9 @@ def main() -> None:
                             disabled=True,
                         )
 
-    # Phase 1: Expandable Page-wise Raw Inspection Section (Maintained for full regression support)
+    # =========================================================================
+    # PHASE 1: PAGE-WISE RAW INSPECTION (Regression support)
+    # =========================================================================
     with st.expander("🔍 View Phase 1 Extracted Pages (Page-Level Inspection)", expanded=False):
         st.caption("Inspect the page-by-page extracted text, cleaned text, tokens, and stop-word filtered tokens.")
 

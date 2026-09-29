@@ -21,6 +21,11 @@ from src.chunker import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_MIN_CHUNK_SIZE,
 )
+from src.retriever import (
+    TFIDFRetriever,
+    retrieve_relevant_chunks,
+    RetrievalError,
+)
 
 __all__ = [
     # Phase 1: PDF extraction & preprocessing
@@ -43,4 +48,8 @@ __all__ = [
     "DEFAULT_CHUNK_SIZE",
     "DEFAULT_CHUNK_OVERLAP",
     "DEFAULT_MIN_CHUNK_SIZE",
+    # Phase 3: Retrieval Engine
+    "TFIDFRetriever",
+    "retrieve_relevant_chunks",
+    "RetrievalError",
 ]
