@@ -26,6 +26,11 @@ from src.retriever import (
     retrieve_relevant_chunks,
     RetrievalError,
 )
+from src.qa_engine import (
+    ExtractiveQAEngine,
+    answer_question,
+    QAError,
+)
 
 __all__ = [
     # Phase 1: PDF extraction & preprocessing
@@ -52,4 +57,8 @@ __all__ = [
     "TFIDFRetriever",
     "retrieve_relevant_chunks",
     "RetrievalError",
+    # Phase 4: Question Answering
+    "ExtractiveQAEngine",
+    "answer_question",
+    "QAError",
 ]

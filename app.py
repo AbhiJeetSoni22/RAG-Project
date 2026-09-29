@@ -1,8 +1,9 @@
-"""Streamlit application for Retrieval Based Question Answering (Phases 1, 2 & 3).
+"""Streamlit application for Retrieval Based Question Answering (Phases 1, 2, 3 & 4).
 
 Phase 1: Document Ingestion & Text Preprocessing
 Phase 2: Text Chunking & Retrieval Data Preparation
 Phase 3: Retrieval Engine (TF-IDF + Cosine Similarity)
+Phase 4: Question Answering (Extractive, Retrieval-Grounded QA)
 """
 
 from __future__ import annotations
@@ -29,6 +30,10 @@ from src.retriever import (
     TFIDFRetriever,
     RetrievalError,
 )
+from src.qa_engine import (
+    ExtractiveQAEngine,
+    QAError,
+)
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -37,7 +42,7 @@ logger = logging.getLogger(__name__)
 # Configure Streamlit page
 st.set_page_config(
     page_title="Retrieval Based Question Answering",
-    page_icon="🔍",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -69,7 +74,7 @@ st.markdown(
 
     .badge-phase {
         display: inline-block;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
         color: white;
         font-size: 0.75rem;
         font-weight: 600;
@@ -142,6 +147,72 @@ st.markdown(
         font-size: 1.4rem;
         font-weight: 700;
         color: #0f172a;
+    }
+
+    /* Phase 4 Answer Cards */
+    .answer-card {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 6px solid #16a34a;
+        border-radius: 0.75rem;
+        padding: 1.35rem 1.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.08);
+    }
+
+    .answer-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #15803d;
+        margin-bottom: 0.5rem;
+    }
+
+    .answer-text {
+        font-size: 1.18rem;
+        font-weight: 600;
+        color: #14532d;
+        line-height: 1.6;
+    }
+
+    .no-answer-card {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-left: 6px solid #dc2626;
+        border-radius: 0.75rem;
+        padding: 1.25rem 1.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .no-answer-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #b91c1c;
+        margin-bottom: 0.35rem;
+    }
+
+    .no-answer-msg {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #991b1b;
+        margin-bottom: 0.25rem;
+    }
+
+    .source-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
     }
 
     /* Result Card Styling */
@@ -261,16 +332,6 @@ st.markdown(
         padding: 0.2rem 0.55rem;
         border-radius: 0.375rem;
     }
-
-    .info-callout {
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        border-radius: 0.65rem;
-        padding: 0.85rem 1.1rem;
-        color: #166534;
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -279,16 +340,16 @@ st.markdown(
 
 def render_header() -> None:
     """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 3 &bull; Retrieval Engine (TF-IDF + Cosine Similarity)</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge-phase">Phase 4 &bull; Extractive Question Answering</span>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Upload a PDF, partition it into semantic chunks, and retrieve the most relevant passages using TF-IDF and Cosine Similarity.</div>',
+        '<div class="sub-title">Upload a PDF, retrieve relevant passages via TF-IDF, and extract grounded factual answers with exact page citations.</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_sidebar() -> tuple[int, int, int, float]:
-    """Render sidebar controls for configurable chunking and retrieval parameters."""
+def render_sidebar() -> tuple[int, int, int, float, int]:
+    """Render sidebar controls for configurable chunking, retrieval, and QA parameters."""
     with st.sidebar:
         st.markdown("### ⚙️ Engine Configuration")
 
@@ -316,12 +377,12 @@ def render_sidebar() -> tuple[int, int, int, float]:
         st.markdown("---")
         st.markdown("#### 🔍 Phase 3: Retrieval")
         top_k = st.slider(
-            "Top-K Results",
+            "Top-K Retrieved Passages",
             min_value=1,
             max_value=10,
             value=5,
             step=1,
-            help="Maximum number of relevant passages to retrieve.",
+            help="Maximum number of relevant passages to retrieve for answer extraction.",
             key="cfg_top_k",
         )
 
@@ -336,23 +397,34 @@ def render_sidebar() -> tuple[int, int, int, float]:
         )
 
         st.markdown("---")
-        st.markdown("#### ℹ️ Retrieval Method")
+        st.markdown("#### 💡 Phase 4: Answer Extraction")
+        max_sentences = st.slider(
+            "Max Answer Sentences",
+            min_value=1,
+            max_value=3,
+            value=2,
+            step=1,
+            help="Maximum number of consecutive sentences to extract for the answer span.",
+            key="cfg_max_sentences",
+        )
+
+        st.markdown("---")
+        st.markdown("#### ℹ️ Grounding Principle")
         st.markdown(
             """
-            * **Method:** TF-IDF + Cosine Similarity
-            * **Corpus:** Phase 2 cleaned text chunks
-            * **Metric:** Cosine angle $[0.0, 1.0]$
-            * **Display:** Raw `original_text` passage
-            * *Higher score = stronger lexical match*
+            * **Strategy:** Extractive / Retrieval-grounded
+            * **Principle:** Retrieve first $\\rightarrow$ Answer only from evidence
+            * **Safety:** Never answers if no evidence exists in the document
+            * **No LLM / Hallucinations:** 100% deterministic NLP extraction
             """
         )
 
-    return chunk_size, chunk_overlap, top_k, min_similarity
+    return chunk_size, chunk_overlap, top_k, min_similarity, max_sentences
 
 
 def main() -> None:
     """Main application loop."""
-    chunk_size, chunk_overlap, top_k, min_similarity = render_sidebar()
+    chunk_size, chunk_overlap, top_k, min_similarity, max_sentences = render_sidebar()
     render_header()
 
     # Upload Section
@@ -360,11 +432,11 @@ def main() -> None:
     uploaded_file = st.file_uploader(
         "Choose a PDF file",
         type=["pdf"],
-        help="Upload a PDF file to extract, clean, tokenize, chunk, and search its content.",
+        help="Upload a PDF file to extract, clean, tokenize, chunk, and perform Question Answering.",
     )
 
     if uploaded_file is None:
-        st.info("👋 Please upload a PDF document above to start document ingestion and question retrieval.")
+        st.info("👋 Please upload a PDF document above to start document ingestion and question answering.")
         return
 
     # Check for empty file upload (0 bytes)
@@ -444,6 +516,9 @@ def main() -> None:
         st.error(f"❌ Failed to build TF-IDF retriever: {exc}")
         return
 
+    # Phase 4: Initialize QA Engine
+    qa_engine = ExtractiveQAEngine()
+
     st.markdown("---")
 
     # Layout: Status Checklist & Document Information
@@ -460,7 +535,8 @@ def main() -> None:
                 <div class="status-item"><span class="status-check">✓</span> Tokenization completed</div>
                 <div class="status-item"><span class="status-check">✓</span> Stop-word removal completed</div>
                 <div class="status-item"><span class="status-check">✓</span> Text chunking completed ({len(chunks)} chunks)</div>
-                <div class="status-item"><span class="status-check">✓</span> <b>TF-IDF vectorizer indexed ({len(chunks)} passages)</b></div>
+                <div class="status-item"><span class="status-check">✓</span> TF-IDF vectorizer indexed ({len(chunks)} passages)</div>
+                <div class="status-item"><span class="status-check">✓</span> <b>Extractive QA Engine ready</b></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -493,7 +569,7 @@ def main() -> None:
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Indexed Chunks</div>
-                    <div class="metric-val" style="color: #059669;">{chunk_stats["total_chunks"]}</div>
+                    <div class="metric-val" style="color: #4f46e5;">{chunk_stats["total_chunks"]}</div>
                 </div>
             </div>
             """,
@@ -503,106 +579,147 @@ def main() -> None:
     st.markdown("---")
 
     # =========================================================================
-    # PHASE 3: QUESTION RETRIEVAL SECTION
+    # PHASE 4: QUESTION ANSWERING SECTION
     # =========================================================================
-    st.markdown("## 🔍 Ask a Question")
-    st.caption("Ask questions about the uploaded document. The retrieval engine computes TF-IDF vectors and ranks relevant passages using Cosine Similarity.")
+    st.markdown("## 🤖 Question Answering")
+    st.caption("Ask questions about the uploaded document. The system retrieves relevant passages and extracts factual answers strictly grounded in the document evidence.")
 
-    # Form or controls for query input
     col_query, col_btn = st.columns([5, 1])
 
     with col_query:
         query_input = st.text_input(
             "Enter your question:",
-            placeholder="e.g. What is Natural Language Processing? Or: How does tokenization work?",
-            key="user_question_input",
+            placeholder="e.g. What is Natural Language Processing? Or: What are the attendance requirements?",
+            key="user_qa_question_input",
             label_visibility="collapsed",
         )
 
     with col_btn:
-        search_clicked = st.button("🔎 Search", type="primary", use_container_width=True)
+        search_clicked = st.button("💬 Ask Question", type="primary", use_container_width=True)
 
-    # Retrieval Explanation (Requirement 14)
-    with st.expander("ℹ️ How Retrieval Works (TF-IDF + Cosine Similarity)", expanded=False):
-        st.markdown(
-            """
-            * **Retrieval Method:** **TF-IDF + Cosine Similarity**
-            * **Question Preprocessing:** The question is cleaned and normalized using the same pipeline as the document chunks.
-            * **Vector Space:** The question is projected into the pre-fitted TF-IDF vector space of the document corpus.
-            * **Ranking:** Cosine similarity measures the angular alignment between question and chunk vectors ($0.0 \\le \\text{score} \\le 1.0$).
-            * **Relevance:** *Higher similarity = stronger lexical relevance.* Chunks below the minimum threshold are excluded.
-            * **Evidence Display:** Retrieved evidence is strictly presented using the original text (`original_text`).
-            """
-        )
-
-    # Execute Search when query is submitted or button clicked
+    # Retrieval & QA Pipeline Execution
     if query_input:
         cleaned_q = query_input.strip()
 
-        # Handle empty / whitespace query (Requirement 10)
+        # Requirement 16: Handle empty / whitespace / punctuation-only question
         if not cleaned_q or not any(c.isalnum() for c in cleaned_q):
             st.warning("⚠️ Please enter a question containing valid words or alphanumeric keywords.")
         else:
-            with st.spinner("Searching document for relevant passages..."):
+            with st.spinner("Retrieving relevant passages and extracting grounded answer..."):
+                # Phase 3: Retrieve top-k chunks
                 retrieved_results = retriever.search(
                     query=cleaned_q,
                     top_k=top_k,
                     min_similarity=min_similarity,
                 )
 
-            st.markdown("### 🎯 Retrieval Results")
-
-            # Handle no-match below threshold (Requirement 8 & 9)
-            if not retrieved_results:
-                st.info("ℹ️ **No sufficiently relevant information was found in this document.**")
-                st.caption(
-                    f"No passages met the minimum similarity threshold of **{min_similarity:.2f}**. "
-                    "Try rephrasing your question or lowering the Minimum Similarity threshold in the sidebar."
-                )
-            else:
-                st.success(
-                    f"✓ Retrieved **{len(retrieved_results)}** relevant passage(s) "
-                    f"(Top-K: {top_k} | Min Similarity: {min_similarity:.2f})"
+                # Phase 4: Extract answer from retrieved passages
+                qa_result = qa_engine.answer(
+                    question=cleaned_q,
+                    retrieved_chunks=retrieved_results,
+                    max_sentences=max_sentences,
                 )
 
-                for rank, res in enumerate(retrieved_results, start=1):
-                    score = res["similarity_score"]
-                    pct_str = f"{score * 100:.2f}%"
+            # =================================================================
+            # Requirement 11, 12, 13, 15: Answer Presentation
+            # =================================================================
+            if qa_result["found"]:
+                st.markdown("### 💡 Answer")
+                st.markdown(
+                    f"""
+                    <div class="answer-card">
+                        <div class="answer-title">✓ Grounded Answer (Extracted from Document)</div>
+                        <div class="answer-text">{qa_result['answer']}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                    # Determine pill badge color based on score magnitude
-                    if score >= 0.40:
-                        sim_class = "similarity-high"
-                    elif score >= 0.15:
-                        sim_class = "similarity-med"
-                    else:
-                        sim_class = "similarity-low"
+                # Requirement 12: Source Attribution Section
+                st.markdown(
+                    f"""
+                    <div class="source-container">
+                        <span style="font-weight: 700; font-size: 0.82rem; color: #475569; text-transform: uppercase;">Source Attribution:</span>
+                        <span class="meta-tag"><b>Document:</b> {qa_result['source']}</span>
+                        <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
+                        <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
+                        <span class="meta-tag"><b>Retrieval Similarity:</b> {qa_result['similarity_score'] * 100:.2f}%</span>
+                        <span class="meta-tag"><b>Sentence Score:</b> {qa_result['sentence_score']:.2f}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                    st.markdown(
-                        f"""
-                        <div class="result-card">
-                            <div class="result-header">
-                                <span class="rank-pill">Rank #{rank}</span>
-                                <span class="similarity-pill {sim_class}">Similarity: {pct_str}</span>
-                                <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
-                                <span class="meta-tag"><b>Source:</b> {res['source']}</span>
-                                <span class="meta-tag"><b>Page:</b> {res['page']}</span>
-                                <span class="meta-tag"><b>Chars:</b> {res['char_count']}</span>
-                                <span class="meta-tag"><b>Words:</b> {res['word_count']}</span>
-                            </div>
-                            <div style="font-size: 0.8rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.5rem;">
-                                📄 Original Retrieved Passage (Ground Truth Evidence):
-                            </div>
-                            <div class="passage-box">{res['original_text']}</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
+                # Requirement 13: Evidence Section
+                with st.expander("📜 Retrieved Evidence (Ground Truth Passage)", expanded=True):
+                    st.caption("The exact original passage from which the answer was extracted.")
+                    st.text_area(
+                        label="Original Evidence Passage",
+                        value=qa_result["evidence"],
+                        height=110,
+                        key=f"evidence_{qa_result['chunk_id']}",
+                        disabled=True,
                     )
+
+            else:
+                # Requirement 15: No-Answer UI
+                st.markdown("### 💡 Answer")
+                st.markdown(
+                    f"""
+                    <div class="no-answer-card">
+                        <div class="no-answer-title">❌ No Answer Found</div>
+                        <div class="no-answer-msg">No answer could be found in the uploaded document.</div>
+                        <div style="font-size: 0.88rem; color: #7f1d1d; margin-top: 0.4rem;">
+                            <b>Reason:</b> {qa_result['reason']}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            # =================================================================
+            # Requirement 14: Top Retrieved Passages Section
+            # =================================================================
+            with st.expander("🔍 Top Retrieved Passages (Phase 3 Retrieval Candidates)", expanded=False):
+                st.caption(
+                    "Inspect all candidate passages retrieved by the Phase 3 TF-IDF engine that were analyzed by the QA engine."
+                )
+
+                if not retrieved_results:
+                    st.info("ℹ️ No passages met the minimum similarity threshold.")
+                else:
+                    for rank, res in enumerate(retrieved_results, start=1):
+                        score = res["similarity_score"]
+                        pct_str = f"{score * 100:.2f}%"
+
+                        if score >= 0.40:
+                            sim_class = "similarity-high"
+                        elif score >= 0.15:
+                            sim_class = "similarity-med"
+                        else:
+                            sim_class = "similarity-low"
+
+                        st.markdown(
+                            f"""
+                            <div class="result-card">
+                                <div class="result-header">
+                                    <span class="rank-pill">Rank #{rank}</span>
+                                    <span class="similarity-pill {sim_class}">Similarity: {pct_str}</span>
+                                    <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                    <span class="meta-tag"><b>Page:</b> {res['page']}</span>
+                                    <span class="meta-tag"><b>Chars:</b> {res['char_count']}</span>
+                                </div>
+                                <div class="passage-box">{res['original_text']}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
 
     # =========================================================================
-    # PHASE 2: DOCUMENT CHUNKING SECTION (Maintained for complete inspection)
+    # PHASE 2: DOCUMENT CHUNKING SECTION (Maintained for full inspection)
     # =========================================================================
     st.markdown("## 🧩 Document Chunking")
     st.success(
