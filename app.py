@@ -12,6 +12,9 @@ import io
 import logging
 import streamlit as st
 
+from pathlib import Path
+import pandas as pd
+
 from src.pdf_processor import extract_text_from_pdf, PDFProcessingError
 from src.text_processor import (
     process_page_data,
@@ -40,6 +43,15 @@ from src.semantic_retriever import (
     SemanticRetrievalError,
     DEFAULT_MODEL_NAME,
 )
+from src.evaluator import (
+    load_evaluation_dataset,
+    validate_dataset_against_chunks,
+    compare_retrieval_methods,
+    export_results_to_csv,
+    export_summary_to_csv,
+    EvaluationError,
+)
+
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -367,12 +379,13 @@ st.markdown(
 
 def render_header() -> None:
     """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 5 &bull; Semantic Retrieval & Extractive QA</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge-phase">Phase 6 &bull; Retrieval Evaluation & Benchmarking</span>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Upload a PDF, retrieve relevant passages via Semantic Embeddings (Sentence Transformers) or Lexical TF-IDF, and extract grounded factual answers with exact page citations.</div>',
+        '<div class="sub-title">Upload a PDF, retrieve passages via Semantic Embeddings or TF-IDF, extract grounded answers, and objectively benchmark retrieval performance across standard IR metrics.</div>',
         unsafe_allow_html=True,
     )
+
 
 
 def render_sidebar() -> tuple[int, int, str, int, float, int]:
@@ -586,7 +599,9 @@ def main() -> None:
                 <div class="status-item"><span class="status-check">✓</span> TF-IDF vectorizer indexed ({len(chunks)} passages)</div>
                 <div class="status-item"><span class="status-check">✓</span> Semantic embeddings indexed ({len(chunks)} passages &bull; all-MiniLM-L6-v2)</div>
                 <div class="status-item"><span class="status-check">✓</span> <b>Extractive QA Engine ready</b></div>
+                <div class="status-item"><span class="status-check">✓</span> <b>Retrieval Evaluation Framework ready</b></div>
             </div>
+
             """,
             unsafe_allow_html=True,
         )
@@ -785,6 +800,239 @@ def main() -> None:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
+
+    # =========================================================================
+    # PHASE 6: RETRIEVAL EVALUATION & BENCHMARKING SECTION
+    # =========================================================================
+    st.markdown("## ⚖️ Retrieval Evaluation & Benchmarking")
+    st.caption(
+        "Objectively benchmark and compare Lexical TF-IDF vs. Dense Semantic Embeddings using "
+        "standard Information Retrieval metrics (Hit@K, Precision@K, Recall@K, and Mean Reciprocal Rank) "
+        "on a verified ground-truth dataset."
+    )
+
+    with st.expander("⚙️ Evaluation Dataset & Parameters", expanded=True):
+        col_ds_choice, col_eval_k = st.columns([3, 2])
+
+        with col_ds_choice:
+            dataset_option = st.radio(
+                "Evaluation Dataset Source",
+                options=["Default Project Dataset (evaluation/qa_dataset.json)", "Upload Custom Dataset (.json)"],
+                index=0,
+                key="eval_dataset_option",
+            )
+
+            loaded_questions = None
+            eval_dataset_error = None
+
+            if dataset_option == "Default Project Dataset (evaluation/qa_dataset.json)":
+                default_ds_path = Path("evaluation/qa_dataset.json")
+                if default_ds_path.exists():
+                    try:
+                        loaded_questions = load_evaluation_dataset(default_ds_path)
+                    except Exception as e:
+                        eval_dataset_error = str(e)
+                else:
+                    eval_dataset_error = "Default dataset file evaluation/qa_dataset.json not found."
+            else:
+                custom_ds_file = st.file_uploader(
+                    "Upload JSON Evaluation Dataset",
+                    type=["json"],
+                    key="custom_eval_dataset_uploader",
+                    help="Upload a JSON array containing objects with 'id', 'question', and 'relevant_chunk_ids'.",
+                )
+                if custom_ds_file is not None:
+                    try:
+                        loaded_questions = load_evaluation_dataset(custom_ds_file)
+                    except Exception as e:
+                        eval_dataset_error = str(e)
+                else:
+                    st.info("ℹ️ Upload a JSON dataset file to begin evaluation.")
+
+        with col_eval_k:
+            eval_k_values = st.multiselect(
+                "Evaluation Cutoffs (K values)",
+                options=[1, 2, 3, 5, 10],
+                default=[1, 3, 5],
+                key="eval_k_selection",
+                help="Select Top-K ranks at which Hit@K, Precision@K, and Recall@K will be measured.",
+            )
+            eval_min_sim = st.number_input(
+                "Evaluation Min Similarity Cutoff",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.0,
+                step=0.05,
+                key="eval_min_sim_input",
+                help="Similarity threshold below which retrieved candidates are dropped during evaluation. Default 0.0 benchmarks raw ranking.",
+            )
+
+        # Validation status
+        if eval_dataset_error:
+            st.error(f"❌ Dataset Error: {eval_dataset_error}")
+        elif loaded_questions:
+            val_info = validate_dataset_against_chunks(loaded_questions, chunks)
+            cat_list = sorted(list({q.get("category", "general") for q in loaded_questions}))
+
+            if val_info["is_fully_aligned"]:
+                st.success(
+                    f"✓ Evaluation dataset ready: **{len(loaded_questions)} questions** across "
+                    f"**{len(cat_list)} categories** ({', '.join(cat_list)}). "
+                    f"**All {val_info['matching_chunks_count']} ground-truth chunks match the active document.**"
+                )
+            else:
+                st.warning(
+                    f"⚠️ Evaluation dataset loaded ({len(loaded_questions)} questions, {len(cat_list)} categories). "
+                    f"**{val_info['aligned_questions_count']}/{len(loaded_questions)} questions** align with current document chunks. "
+                    f"({val_info['missing_chunks_count']} ground-truth chunks from other documents: {', '.join(val_info['missing_chunk_ids'][:4])}...)"
+                )
+
+    # Explicit Execution Button to avoid rerunning on every Streamlit interaction
+    col_eval_btn, col_eval_status = st.columns([1, 3])
+    with col_eval_btn:
+        run_eval_clicked = st.button("🚀 Run Retrieval Evaluation", type="primary", key="btn_run_retrieval_eval")
+
+    if run_eval_clicked:
+        if not loaded_questions:
+            st.error("⚠️ No valid evaluation dataset loaded. Please select or upload a dataset first.")
+        elif not eval_k_values:
+            st.error("⚠️ Please select at least one K value for evaluation.")
+        else:
+            with st.spinner("Benchmarking TF-IDF and Semantic Retrievers across evaluation dataset..."):
+                try:
+                    comparison_result = compare_retrieval_methods(
+                        questions=loaded_questions,
+                        retrievers={
+                            "TF-IDF": tfidf_retriever,
+                            "Semantic": semantic_retriever,
+                        },
+                        k_values=eval_k_values,
+                        min_similarity=eval_min_sim,
+                    )
+                    st.session_state["phase6_evaluation_result"] = comparison_result
+                    st.success("✓ Evaluation completed successfully!")
+                except Exception as exc:
+                    logger.error(f"Evaluation error: {exc}", exc_info=True)
+                    st.error(f"❌ Evaluation Error: {exc}")
+
+    # Display evaluation results if available in session_state
+    if "phase6_evaluation_result" in st.session_state:
+        eval_res = st.session_state["phase6_evaluation_result"]
+
+        st.markdown("### 📊 Benchmark Results")
+
+        t_overall, t_cat, t_questions, t_export = st.tabs([
+            "📈 Overall Metrics Comparison",
+            "🏷️ Category Analysis",
+            "🔍 Per-Question Breakdown",
+            "📥 CSV Export",
+        ])
+
+        with t_overall:
+            st.caption("Standardized Information Retrieval metrics comparing Lexical TF-IDF and Dense Semantic retrieval across the dataset.")
+
+            df_metrics = pd.DataFrame(eval_res.overall_metrics_table)
+            if "TF-IDF" in df_metrics.columns and "Semantic" in df_metrics.columns:
+                df_metrics["Difference (Semantic - TF-IDF)"] = (
+                    df_metrics["Semantic"] - df_metrics["TF-IDF"]
+                ).map(lambda v: f"{v:+.4f}")
+
+            st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+
+            # High-level metric highlights
+            tfidf_summary = eval_res.summaries.get("TF-IDF")
+            semantic_summary = eval_res.summaries.get("Semantic")
+            if tfidf_summary and semantic_summary:
+                eval_max_k = max(eval_res.k_values)
+                c_m1, c_m2, c_m3, c_m4 = st.columns(4)
+                with c_m1:
+                    st.metric(
+                        f"Hit@{eval_max_k} (Semantic vs TF-IDF)",
+                        f"{semantic_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
+                        f"{(semantic_summary.hit_rates.get(eval_max_k, 0.0) - tfidf_summary.hit_rates.get(eval_max_k, 0.0)):+.4f} vs TF-IDF ({tfidf_summary.hit_rates.get(eval_max_k, 0.0):.4f})",
+                    )
+                with c_m2:
+                    st.metric(
+                        "MRR (Semantic vs TF-IDF)",
+                        f"{semantic_summary.mrr:.4f}",
+                        f"{(semantic_summary.mrr - tfidf_summary.mrr):+.4f} vs TF-IDF ({tfidf_summary.mrr:.4f})",
+                    )
+                with c_m3:
+                    st.metric(
+                        f"Precision@{eval_max_k}",
+                        f"{semantic_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
+                        f"TF-IDF: {tfidf_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
+                        delta_color="off",
+                    )
+                with c_m4:
+                    st.metric(
+                        f"Recall@{eval_max_k}",
+                        f"{semantic_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
+                        f"TF-IDF: {tfidf_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
+                        delta_color="off",
+                    )
+
+        with t_cat:
+            st.caption("Performance comparison broken down by linguistic query category.")
+            df_cat = pd.DataFrame(eval_res.category_metrics_table)
+            st.dataframe(df_cat, use_container_width=True, hide_index=True)
+
+        with t_questions:
+            st.caption("Detailed query-level retrieval ranking, hits, and reciprocal ranks.")
+            df_pq = pd.DataFrame(eval_res.per_question_table)
+            cat_filter = st.selectbox(
+                "Filter by Category",
+                options=["All Categories"] + sorted(list({q["category"] for q in eval_res.per_question_table})),
+                key="eval_per_q_cat_filter",
+            )
+            if cat_filter != "All Categories":
+                df_pq = df_pq[df_pq["category"] == cat_filter]
+
+            st.dataframe(df_pq, use_container_width=True, hide_index=True)
+
+        with t_export:
+            st.caption("Download the empirical evaluation measurements in standard CSV format.")
+
+            # Prepare CSV data
+            all_q_results = []
+            for s in eval_res.summaries.values():
+                all_q_results.extend(s.query_results)
+
+            csv_results = export_results_to_csv(all_q_results)
+            csv_summary = export_summary_to_csv(eval_res)
+
+            exp_col1, exp_col2 = st.columns(2)
+            with exp_col1:
+                st.download_button(
+                    label="📥 Download Detailed results.csv",
+                    data=csv_results,
+                    file_name="results.csv",
+                    mime="text/csv",
+                    help="Contains per-question metrics (Hit, Precision, Recall, Reciprocal Rank) for every K.",
+                    use_container_width=True,
+                    key="btn_dl_results_csv",
+                )
+            with exp_col2:
+                st.download_button(
+                    label="📥 Download Summary summary.csv",
+                    data=csv_summary,
+                    file_name="summary.csv",
+                    mime="text/csv",
+                    help="Contains aggregate summary metrics (Hit@1, Hit@3, Hit@5, Precision@5, Recall@5, MRR).",
+                    use_container_width=True,
+                    key="btn_dl_summary_csv",
+                )
+
+            # Optional save to disk
+            if st.button("💾 Save CSV files to evaluation/ directory on disk", key="btn_save_csv_disk"):
+                Path("evaluation").mkdir(parents=True, exist_ok=True)
+                export_results_to_csv(all_q_results, "evaluation/results.csv")
+                export_summary_to_csv(eval_res, "evaluation/summary.csv")
+                st.success("✓ Saved to evaluation/results.csv and evaluation/summary.csv")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
+
 
     # =========================================================================
     # PHASE 2: DOCUMENT CHUNKING SECTION (Maintained for full inspection)

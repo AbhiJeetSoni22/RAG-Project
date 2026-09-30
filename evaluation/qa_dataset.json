@@ -1,0 +1,153 @@
+[
+  {
+    "id": "q001",
+    "question": "What is Natural Language Processing?",
+    "category": "definition",
+    "relevant_chunk_ids": [
+      "page_1_chunk_1"
+    ],
+    "relevant_pages": [1],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q002",
+    "question": "How many core disciplines intersect to form the foundation of NLP?",
+    "category": "numeric",
+    "relevant_chunk_ids": [
+      "page_1_chunk_1"
+    ],
+    "relevant_pages": [1],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q003",
+    "question": "What real-world applications are powered by modern NLP systems?",
+    "category": "exact_keyword",
+    "relevant_chunk_ids": [
+      "page_1_chunk_2"
+    ],
+    "relevant_pages": [1],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q004",
+    "question": "Which practical technologies rely on natural language processing systems?",
+    "category": "paraphrased",
+    "relevant_chunk_ids": [
+      "page_1_chunk_2"
+    ],
+    "relevant_pages": [1],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q005",
+    "question": "Why does raw unstructured text need to undergo cleaning before indexing?",
+    "category": "conceptual",
+    "relevant_chunk_ids": [
+      "page_1_chunk_3"
+    ],
+    "relevant_pages": [1],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q006",
+    "question": "What is tokenization and what units does it produce?",
+    "category": "definition",
+    "relevant_chunk_ids": [
+      "page_2_chunk_1"
+    ],
+    "relevant_pages": [2],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q007",
+    "question": "What linguistic units can tokens represent in text segmentation?",
+    "category": "factual",
+    "relevant_chunk_ids": [
+      "page_2_chunk_1"
+    ],
+    "relevant_pages": [2],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q008",
+    "question": "What common normalization operations include case folding and stop word removal?",
+    "category": "exact_keyword",
+    "relevant_chunk_ids": [
+      "page_2_chunk_2"
+    ],
+    "relevant_pages": [2],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q009",
+    "question": "How does removing conjunctions and prepositions optimize downstream vector retrieval?",
+    "category": "conceptual",
+    "relevant_chunk_ids": [
+      "page_2_chunk_2"
+    ],
+    "relevant_pages": [2],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q010",
+    "question": "Why is chunking necessary when building retrieval-based QA systems?",
+    "category": "conceptual",
+    "relevant_chunk_ids": [
+      "page_3_chunk_1"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q011",
+    "question": "What syntactic boundaries are respected by paragraph-aware chunking?",
+    "category": "factual",
+    "relevant_chunk_ids": [
+      "page_3_chunk_1"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q012",
+    "question": "How does splitting documents prevent exceeding context limits during question answering?",
+    "category": "paraphrased",
+    "relevant_chunk_ids": [
+      "page_3_chunk_1"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q013",
+    "question": "What rich metadata annotations are attached to each chunk?",
+    "category": "factual",
+    "relevant_chunk_ids": [
+      "page_3_chunk_2"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q014",
+    "question": "Why is a controlled overlap introduced between adjacent text chunks?",
+    "category": "paraphrased",
+    "relevant_chunk_ids": [
+      "page_3_chunk_2"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  },
+  {
+    "id": "q015",
+    "question": "What techniques are used for preparing and segmenting text for retrieval?",
+    "category": "conceptual",
+    "relevant_chunk_ids": [
+      "page_3_chunk_1",
+      "page_3_chunk_2"
+    ],
+    "relevant_pages": [3],
+    "source": "sample_document.pdf"
+  }
+]

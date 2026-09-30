@@ -38,6 +38,24 @@ from src.semantic_retriever import (
     SemanticRetrievalError,
 )
 
+from src.evaluator import (
+    compute_hit_at_k,
+    compute_precision_at_k,
+    compute_recall_at_k,
+    compute_reciprocal_rank,
+    QueryEvaluationResult,
+    CategoryMetric,
+    EvaluationSummary,
+    ComparisonResult,
+    evaluate_retriever,
+    compare_retrieval_methods,
+    load_evaluation_dataset,
+    validate_dataset_against_chunks,
+    export_results_to_csv,
+    export_summary_to_csv,
+    EvaluationError,
+)
+
 __all__ = [
     # Phase 1: PDF extraction & preprocessing
     "extract_text_from_pdf",
@@ -71,4 +89,21 @@ __all__ = [
     "SemanticRetriever",
     "retrieve_semantic_chunks",
     "SemanticRetrievalError",
+    # Phase 6: Retrieval Evaluation
+    "compute_hit_at_k",
+    "compute_precision_at_k",
+    "compute_recall_at_k",
+    "compute_reciprocal_rank",
+    "QueryEvaluationResult",
+    "CategoryMetric",
+    "EvaluationSummary",
+    "ComparisonResult",
+    "evaluate_retriever",
+    "compare_retrieval_methods",
+    "load_evaluation_dataset",
+    "validate_dataset_against_chunks",
+    "export_results_to_csv",
+    "export_summary_to_csv",
+    "EvaluationError",
 ]
+
