@@ -37,6 +37,11 @@ from src.semantic_retriever import (
     retrieve_semantic_chunks,
     SemanticRetrievalError,
 )
+from src.hybrid_retriever import (
+    HybridRetriever,
+    retrieve_hybrid_chunks,
+    HybridRetrievalError,
+)
 
 from src.evaluator import (
     compute_hit_at_k,
@@ -89,6 +94,10 @@ __all__ = [
     "SemanticRetriever",
     "retrieve_semantic_chunks",
     "SemanticRetrievalError",
+    # Phase 7: Hybrid Retrieval
+    "HybridRetriever",
+    "retrieve_hybrid_chunks",
+    "HybridRetrievalError",
     # Phase 6: Retrieval Evaluation
     "compute_hit_at_k",
     "compute_precision_at_k",

@@ -1,91 +1,226 @@
-question_id,question,category,method,k,hit,precision,recall,reciprocal_rank,retrieved_chunk_ids,relevant_chunk_ids
-q001,What is Natural Language Processing?,definition,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1
-q001,What is Natural Language Processing?,definition,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2,page_1_chunk_1
-q001,What is Natural Language Processing?,definition,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,1,0,0.0,0.0,0.0,page_2_chunk_2,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,3,1,0.3333,1.0,0.5,page_2_chunk_2; page_1_chunk_1; page_1_chunk_2,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,5,1,0.2,1.0,0.5,page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_3_chunk_2,page_1_chunk_1
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1,page_1_chunk_2
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1; page_2_chunk_2; page_3_chunk_2,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,3,1,0.3333,1.0,0.3333,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,5,1,0.2,1.0,0.3333,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2,page_1_chunk_2
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_3; page_2_chunk_1; page_3_chunk_2,page_1_chunk_3
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_3; page_2_chunk_1; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_1_chunk_3
-q006,What is tokenization and what units does it produce?,definition,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1
-q006,What is tokenization and what units does it produce?,definition,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2,page_2_chunk_1
-q006,What is tokenization and what units does it produce?,definition,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_1_chunk_3,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_1_chunk_3; page_3_chunk_2,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_2_chunk_1
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_3_chunk_2,page_2_chunk_2
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_3_chunk_2; page_3_chunk_1; page_1_chunk_3,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_2_chunk_1,page_2_chunk_2
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_2_chunk_2,page_3_chunk_1
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2; page_2_chunk_1,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1,page_3_chunk_1
-q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2
-q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_3_chunk_2
-q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_2_chunk_1; page_3_chunk_1,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_2; page_2_chunk_1; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,1,0,0.0,0.0,0.0,page_2_chunk_1,page_3_chunk_1; page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,3,1,0.6667,1.0,0.5,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2,page_3_chunk_1; page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,5,1,0.4,1.0,0.5,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_1_chunk_3,page_3_chunk_1; page_3_chunk_2
-q001,What is Natural Language Processing?,definition,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1
-q001,What is Natural Language Processing?,definition,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_1
-q001,What is Natural Language Processing?,definition,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3,page_1_chunk_1
-q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_1; page_3_chunk_1,page_1_chunk_1
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3,page_1_chunk_2
-q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3; page_3_chunk_1; page_2_chunk_2,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,3,1,0.3333,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3,page_1_chunk_2
-q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,5,1,0.2,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_2; page_3_chunk_1,page_1_chunk_2
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_2_chunk_2,page_1_chunk_3
-q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_2_chunk_2; page_3_chunk_1; page_2_chunk_1,page_1_chunk_3
-q006,What is tokenization and what units does it produce?,definition,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1
-q006,What is tokenization and what units does it produce?,definition,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1,page_2_chunk_1
-q006,What is tokenization and what units does it produce?,definition,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_2,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2,page_2_chunk_1
-q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2; page_1_chunk_1; page_3_chunk_1,page_2_chunk_1
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_2_chunk_2
-q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1,page_2_chunk_2
-q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1; page_3_chunk_2; page_2_chunk_1,page_2_chunk_2
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_3,page_3_chunk_1
-q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_3; page_1_chunk_2; page_2_chunk_2,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1
-q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1
-q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1
-q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2
-q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1,page_3_chunk_2
-q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1; page_1_chunk_2; page_2_chunk_1,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1,page_3_chunk_2
-q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_2_chunk_2; page_1_chunk_3,page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,1,1,1.0,0.5,1.0,page_3_chunk_1,page_3_chunk_1; page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,3,1,0.6667,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2,page_3_chunk_1; page_3_chunk_2
-q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,5,1,0.4,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2; page_2_chunk_1; page_1_chunk_2,page_3_chunk_1; page_3_chunk_2
+question_id,question,category,method,k,hit,precision,recall,reciprocal_rank,retrieved_chunk_ids,relevant_chunk_ids,alpha
+q001,What is Natural Language Processing?,definition,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,
+q001,What is Natural Language Processing?,definition,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2,page_1_chunk_1,
+q001,What is Natural Language Processing?,definition,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,1,0,0.0,0.0,0.0,page_2_chunk_2,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,3,1,0.3333,1.0,0.5,page_2_chunk_2; page_1_chunk_1; page_1_chunk_2,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,TF-IDF,5,1,0.2,1.0,0.5,page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_3_chunk_2,page_1_chunk_1,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1,page_1_chunk_2,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1; page_2_chunk_2; page_3_chunk_2,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,3,1,0.3333,1.0,0.3333,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,TF-IDF,5,1,0.2,1.0,0.3333,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2,page_1_chunk_2,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_1_chunk_3; page_2_chunk_1; page_3_chunk_2,page_1_chunk_3,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_1_chunk_3; page_2_chunk_1; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_1_chunk_3,
+q006,What is tokenization and what units does it produce?,definition,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,
+q006,What is tokenization and what units does it produce?,definition,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2,page_2_chunk_1,
+q006,What is tokenization and what units does it produce?,definition,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_1_chunk_3,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_1_chunk_3; page_3_chunk_2,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_2_chunk_1,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_3_chunk_2,page_2_chunk_2,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_3_chunk_2; page_3_chunk_1; page_1_chunk_3,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_2_chunk_1,page_2_chunk_2,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_2_chunk_2,page_3_chunk_1,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_2_chunk_2; page_3_chunk_2; page_2_chunk_1,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1,page_3_chunk_1,
+q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,
+q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_2,page_3_chunk_2,
+q013,What rich metadata annotations are attached to each chunk?,factual,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_2_chunk_1; page_3_chunk_1,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,TF-IDF,5,1,0.2,1.0,1.0,page_3_chunk_2; page_2_chunk_1; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,1,0,0.0,0.0,0.0,page_2_chunk_1,page_3_chunk_1; page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,3,1,0.6667,1.0,0.5,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2,page_3_chunk_1; page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,TF-IDF,5,1,0.4,1.0,0.5,page_2_chunk_1; page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_1_chunk_3,page_3_chunk_1; page_3_chunk_2,
+q001,What is Natural Language Processing?,definition,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,
+q001,What is Natural Language Processing?,definition,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_1,
+q001,What is Natural Language Processing?,definition,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3,page_1_chunk_1,
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_1; page_3_chunk_1,page_1_chunk_1,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3,page_1_chunk_2,
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3; page_3_chunk_1; page_2_chunk_2,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,3,1,0.3333,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3,page_1_chunk_2,
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Semantic,5,1,0.2,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_2; page_3_chunk_1,page_1_chunk_2,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_2_chunk_2,page_1_chunk_3,
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_2_chunk_2; page_3_chunk_1; page_2_chunk_1,page_1_chunk_3,
+q006,What is tokenization and what units does it produce?,definition,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,
+q006,What is tokenization and what units does it produce?,definition,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1,page_2_chunk_1,
+q006,What is tokenization and what units does it produce?,definition,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_2,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2,page_2_chunk_1,
+q007,What linguistic units can tokens represent in text segmentation?,factual,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2; page_1_chunk_1; page_3_chunk_1,page_2_chunk_1,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_2_chunk_2,
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1,page_2_chunk_2,
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1; page_3_chunk_2; page_2_chunk_1,page_2_chunk_2,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_3,page_3_chunk_1,
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_3; page_1_chunk_2; page_2_chunk_2,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1,
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1,
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1,
+q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,
+q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1,page_3_chunk_2,
+q013,What rich metadata annotations are attached to each chunk?,factual,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1; page_1_chunk_2; page_2_chunk_1,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1,page_3_chunk_2,
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Semantic,5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_2_chunk_2; page_1_chunk_3,page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,1,1,1.0,0.5,1.0,page_3_chunk_1,page_3_chunk_1; page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,3,1,0.6667,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2,page_3_chunk_1; page_3_chunk_2,
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Semantic,5,1,0.4,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2; page_2_chunk_1; page_1_chunk_2,page_3_chunk_1; page_3_chunk_2,
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.25
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_1,0.25
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,0.25
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.25
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3,page_1_chunk_1,0.25
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_1; page_3_chunk_1,page_1_chunk_1,0.25
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2,0.25
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3,page_1_chunk_2,0.25
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_1_chunk_3; page_3_chunk_1; page_2_chunk_2,page_1_chunk_2,0.25
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.25),1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2,0.25
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.25),3,1,0.3333,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_2,0.25
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.25),5,1,0.2,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_1_chunk_2,0.25
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3,0.25
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_1_chunk_3,0.25
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2; page_2_chunk_1,page_1_chunk_3,0.25
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.25
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1,page_2_chunk_1,0.25
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_2,page_2_chunk_1,0.25
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.25
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2,page_2_chunk_1,0.25
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2; page_3_chunk_1; page_1_chunk_1,page_2_chunk_1,0.25
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.25
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_2_chunk_2,0.25
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_2_chunk_2,0.25
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.25
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1,page_2_chunk_2,0.25
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1; page_3_chunk_2; page_2_chunk_1,page_2_chunk_2,0.25
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.25
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1,0.25
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_1_chunk_3; page_2_chunk_2,page_3_chunk_1,0.25
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.25
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1,0.25
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1,0.25
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.25
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1,0.25
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_1_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1,0.25
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.25
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1,page_3_chunk_2,0.25
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1; page_1_chunk_2; page_2_chunk_1,page_3_chunk_2,0.25
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.25),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.25
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.25),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1,page_3_chunk_2,0.25
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.25),5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_2_chunk_2; page_1_chunk_3,page_3_chunk_2,0.25
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.25),1,1,1.0,0.5,1.0,page_3_chunk_1,page_3_chunk_1; page_3_chunk_2,0.25
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.25),3,1,0.6667,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2,page_3_chunk_1; page_3_chunk_2,0.25
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.25),5,1,0.4,1.0,1.0,page_3_chunk_1; page_1_chunk_3; page_3_chunk_2; page_2_chunk_1; page_1_chunk_2,page_3_chunk_1; page_3_chunk_2,0.25
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.50
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_1,0.50
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,0.50
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.50
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_2_chunk_2,page_1_chunk_1,0.50
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_1_chunk_1; page_1_chunk_2; page_2_chunk_2; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,0.50
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2,0.50
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1,page_1_chunk_2,0.50
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_1_chunk_2,0.50
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.50),1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2,0.50
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.50),3,1,0.3333,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_2,0.50
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.50),5,1,0.2,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_1_chunk_2,0.50
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3,0.50
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_1_chunk_3,0.50
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1; page_2_chunk_2; page_2_chunk_1,page_1_chunk_3,0.50
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.50
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1,page_2_chunk_1,0.50
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_2,page_2_chunk_1,0.50
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.50
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2,page_2_chunk_1,0.50
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2; page_3_chunk_1; page_1_chunk_1,page_2_chunk_1,0.50
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.50
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_2_chunk_2,0.50
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_2_chunk_2,0.50
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.50
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1,page_2_chunk_2,0.50
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_2_chunk_2; page_1_chunk_3; page_3_chunk_1; page_3_chunk_2; page_2_chunk_1,page_2_chunk_2,0.50
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.50
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1,0.50
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_1_chunk_3; page_2_chunk_2,page_3_chunk_1,0.50
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.50
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1,0.50
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1,0.50
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.50
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1,0.50
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1,0.50
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.50
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1,page_3_chunk_2,0.50
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1; page_1_chunk_2; page_2_chunk_1,page_3_chunk_2,0.50
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.50),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.50
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.50),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1,page_3_chunk_2,0.50
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.50),5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_2_chunk_2; page_1_chunk_3,page_3_chunk_2,0.50
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.50),1,1,1.0,0.5,1.0,page_3_chunk_1,page_3_chunk_1; page_3_chunk_2,0.50
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.50),3,1,0.3333,0.5,1.0,page_3_chunk_1; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1; page_3_chunk_2,0.50
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.50),5,1,0.4,1.0,1.0,page_3_chunk_1; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1; page_3_chunk_2,0.50
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.75
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2,page_1_chunk_1,0.75
+q001,What is Natural Language Processing?,definition,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_1_chunk_1; page_3_chunk_1; page_1_chunk_2; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,0.75
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_1_chunk_1,page_1_chunk_1,0.75
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_1_chunk_1; page_2_chunk_2; page_1_chunk_2,page_1_chunk_1,0.75
+q002,How many core disciplines intersect to form the foundation of NLP?,numeric,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_1_chunk_1; page_2_chunk_2; page_1_chunk_2; page_1_chunk_3; page_2_chunk_1,page_1_chunk_1,0.75
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_1_chunk_2,page_1_chunk_2,0.75
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1,page_1_chunk_2,0.75
+q003,What real-world applications are powered by modern NLP systems?,exact_keyword,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_1_chunk_2; page_1_chunk_1; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_1_chunk_2,0.75
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.75),1,0,0.0,0.0,0.0,page_1_chunk_1,page_1_chunk_2,0.75
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.75),3,1,0.3333,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1,page_1_chunk_2,0.75
+q004,Which practical technologies rely on natural language processing systems?,paraphrased,Hybrid (alpha=0.75),5,1,0.2,1.0,0.5,page_1_chunk_1; page_1_chunk_2; page_3_chunk_1; page_1_chunk_3; page_2_chunk_2,page_1_chunk_2,0.75
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_1_chunk_3,page_1_chunk_3,0.75
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_1_chunk_3,0.75
+q005,Why does raw unstructured text need to undergo cleaning before indexing?,conceptual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_1_chunk_3; page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_2_chunk_2,page_1_chunk_3,0.75
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.75
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1,page_2_chunk_1,0.75
+q006,What is tokenization and what units does it produce?,definition,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_1_chunk_1; page_1_chunk_2; page_3_chunk_2,page_2_chunk_1,0.75
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_2_chunk_1,page_2_chunk_1,0.75
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2,page_2_chunk_1,0.75
+q007,What linguistic units can tokens represent in text segmentation?,factual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_2_chunk_1; page_2_chunk_2; page_3_chunk_2; page_3_chunk_1; page_1_chunk_3,page_2_chunk_1,0.75
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.75
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_2_chunk_2,0.75
+q008,What common normalization operations include case folding and stop word removal?,exact_keyword,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_2_chunk_2; page_2_chunk_1; page_1_chunk_3; page_3_chunk_2; page_3_chunk_1,page_2_chunk_2,0.75
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_2_chunk_2,page_2_chunk_2,0.75
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2,page_2_chunk_2,0.75
+q009,How does removing conjunctions and prepositions optimize downstream vector retrieval?,conceptual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_2_chunk_2; page_3_chunk_1; page_3_chunk_2; page_1_chunk_3; page_2_chunk_1,page_2_chunk_2,0.75
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.75
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1,0.75
+q010,Why is chunking necessary when building retrieval-based QA systems?,conceptual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1,0.75
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.75
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2,page_3_chunk_1,0.75
+q011,What syntactic boundaries are respected by paragraph-aware chunking?,factual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_3_chunk_1; page_3_chunk_2; page_2_chunk_2; page_2_chunk_1; page_1_chunk_3,page_3_chunk_1,0.75
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_3_chunk_1,page_3_chunk_1,0.75
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2,page_3_chunk_1,0.75
+q012,How does splitting documents prevent exceeding context limits during question answering?,paraphrased,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_3_chunk_1; page_1_chunk_2; page_3_chunk_2; page_2_chunk_2; page_1_chunk_3,page_3_chunk_1,0.75
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.75
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1,page_3_chunk_2,0.75
+q013,What rich metadata annotations are attached to each chunk?,factual,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_3_chunk_2; page_1_chunk_3; page_3_chunk_1; page_1_chunk_2; page_2_chunk_1,page_3_chunk_2,0.75
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.75),1,1,1.0,1.0,1.0,page_3_chunk_2,page_3_chunk_2,0.75
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.75),3,1,0.3333,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1,page_3_chunk_2,0.75
+q014,Why is a controlled overlap introduced between adjacent text chunks?,paraphrased,Hybrid (alpha=0.75),5,1,0.2,1.0,1.0,page_3_chunk_2; page_3_chunk_1; page_2_chunk_1; page_1_chunk_3; page_2_chunk_2,page_3_chunk_2,0.75
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.75),1,0,0.0,0.0,0.0,page_2_chunk_1,page_3_chunk_1; page_3_chunk_2,0.75
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.75),3,1,0.3333,0.5,0.5,page_2_chunk_1; page_3_chunk_1; page_1_chunk_3,page_3_chunk_1; page_3_chunk_2,0.75
+q015,What techniques are used for preparing and segmenting text for retrieval?,conceptual,Hybrid (alpha=0.75),5,1,0.4,1.0,0.5,page_2_chunk_1; page_3_chunk_1; page_1_chunk_3; page_3_chunk_2; page_1_chunk_2,page_3_chunk_1; page_3_chunk_2,0.75

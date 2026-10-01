@@ -175,6 +175,7 @@ class QueryEvaluationResult:
     recall: float
     reciprocal_rank: float
     retrieved_scores: list[float] = field(default_factory=list)
+    alpha: Optional[float] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert query evaluation result to a serializable dictionary."""
@@ -191,6 +192,7 @@ class QueryEvaluationResult:
             "recall": round(self.recall, 4),
             "reciprocal_rank": round(self.reciprocal_rank, 4),
             "retrieved_scores": self.retrieved_scores,
+            "alpha": self.alpha,
         }
 
 
@@ -228,6 +230,7 @@ class EvaluationSummary:
     mrr: float
     category_metrics: dict[str, CategoryMetric]
     query_results: list[QueryEvaluationResult]
+    alpha: Optional[float] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert summary to dictionary."""
@@ -241,6 +244,7 @@ class EvaluationSummary:
             "mrr": round(self.mrr, 4),
             "category_metrics": {cat: m.to_dict() for cat, m in self.category_metrics.items()},
             "query_results": [q.to_dict() for q in self.query_results],
+            "alpha": self.alpha,
         }
 
 
@@ -387,6 +391,7 @@ def evaluate_retriever(
     k_values: Sequence[int] = (1, 3, 5),
     min_similarity: float = 0.0,
     method_name: Optional[str] = None,
+    alpha: Optional[float] = None,
 ) -> EvaluationSummary:
     """Evaluate a single retrieval engine against an evaluation dataset.
 
@@ -396,12 +401,16 @@ def evaluate_retriever(
         k_values: Cutoff values K for evaluation (e.g. [1, 3, 5]).
         min_similarity: Minimum cosine similarity threshold (default 0.0 for evaluation).
         method_name: Label for the retriever (defaults to retriever class name).
+        alpha: Optional fusion weight for hybrid retrieval. If None, inspected from retriever.
 
     Returns:
         EvaluationSummary object containing overall, category, and per-query metrics.
     """
     if method_name is None:
         method_name = retriever.__class__.__name__
+
+    if alpha is None:
+        alpha = getattr(retriever, "alpha", None)
 
     sorted_k_values = sorted(list(set(int(k) for k in k_values if int(k) > 0)))
     if not sorted_k_values:
@@ -421,6 +430,7 @@ def evaluate_retriever(
             mrr=0.0,
             category_metrics={},
             query_results=[],
+            alpha=alpha,
         )
 
     # We evaluate for each query at max_k once to get ranked retrieved results
@@ -485,6 +495,7 @@ def evaluate_retriever(
                     recall=k_rec,
                     reciprocal_rank=k_rr,
                     retrieved_scores=retrieved_scores[:k],
+                    alpha=alpha,
                 )
             )
 
@@ -553,6 +564,7 @@ def evaluate_retriever(
         mrr=overall_mrr,
         category_metrics=category_metrics,
         query_results=all_query_results,
+        alpha=alpha,
     )
 
 
@@ -711,10 +723,12 @@ def export_results_to_csv(
         "reciprocal_rank",
         "retrieved_chunk_ids",
         "relevant_chunk_ids",
+        "alpha",
     ])
 
     for item in query_results:
         if isinstance(item, QueryEvaluationResult):
+            alpha_str = f"{item.alpha:.2f}" if getattr(item, "alpha", None) is not None else ""
             row = [
                 item.question_id,
                 item.question,
@@ -727,8 +741,11 @@ def export_results_to_csv(
                 round(item.reciprocal_rank, 4),
                 "; ".join(item.retrieved_chunk_ids),
                 "; ".join(item.relevant_chunk_ids),
+                alpha_str,
             ]
         elif isinstance(item, dict):
+            alpha_val = item.get("alpha")
+            alpha_str = f"{float(alpha_val):.2f}" if alpha_val is not None and str(alpha_val).strip() != "" else ""
             row = [
                 item.get("question_id", ""),
                 item.get("question", ""),
@@ -741,6 +758,7 @@ def export_results_to_csv(
                 round(float(item.get("reciprocal_rank", 0.0)), 4),
                 "; ".join(item.get("retrieved_chunk_ids", [])),
                 "; ".join(item.get("relevant_chunk_ids", [])),
+                alpha_str,
             ]
         else:
             continue
@@ -765,7 +783,7 @@ def export_summary_to_csv(
     """Export summary metrics across methods to CSV string and optionally write to file.
 
     Columns:
-        method, total_queries, hit@1, hit@3, hit@5, precision@5, recall@5, mrr
+        method, total_queries, hit@1, hit@3, hit@5, precision@5, recall@5, mrr, alpha
 
     Args:
         summaries: ComparisonResult or dict of {method_name: EvaluationSummary}.
@@ -791,7 +809,7 @@ def export_summary_to_csv(
     header = ["method", "total_queries"]
     for k in all_k:
         header.append(f"hit@{k}")
-    header.extend([f"precision@{max_k}", f"recall@{max_k}", "mrr"])
+    header.extend([f"precision@{max_k}", f"recall@{max_k}", "mrr", "alpha"])
     writer.writerow(header)
 
     for method_name, s in summary_map.items():
@@ -801,6 +819,8 @@ def export_summary_to_csv(
         row.append(round(s.precision_at_k.get(max_k, 0.0), 4))
         row.append(round(s.recall_at_k.get(max_k, 0.0), 4))
         row.append(round(s.mrr, 4))
+        alpha_str = f"{s.alpha:.2f}" if getattr(s, "alpha", None) is not None else ""
+        row.append(alpha_str)
         writer.writerow(row)
 
     csv_text = output.getvalue()

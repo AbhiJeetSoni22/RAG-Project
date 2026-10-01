@@ -6,205 +6,175 @@ A modular Natural Language Processing (NLP) system designed to allow users to up
 
 ## Current Status
 
-### **Phase 6 — Retrieval Evaluation (ACTIVE)**
+### **Phase 7 — Hybrid Retrieval (ACTIVE)**
 
-Phase 6 introduces an objective, standardized benchmarking and evaluation framework to systematically measure and compare the existing retrieval engines:
-1. **Lexical TF-IDF Retrieval** (Phase 3)
-2. **Dense Semantic Embedding Retrieval** (Phase 5)
-
-The evaluation layer computes standard Information Retrieval (IR) metrics—**Hit@K**, **Precision@K**, **Recall@K**, and **Mean Reciprocal Rank (MRR)**—against a verified ground-truth dataset grounded in actual document passages.
+Phase 7 introduces a modular **Hybrid Retrieval Engine** that unifies sparse lexical relevance from TF-IDF with dense contextual similarity from Sentence Transformer embeddings into a single ranked relevance signal:
 
 ```text
-Evaluation Dataset
-       ↓
-Evaluation Questions
-       ↓
- ┌───────────────┐
- │               │
-TF-IDF        Semantic
-Retriever     Retriever
- │               │
- └───────┬───────┘
-         ↓
-      Top-K
-         ↓
-   Evaluation Layer
-         ↓
- ┌───────────────────────┐
- │ Hit@K                 │
- │ Precision@K           │
- │ Recall@K              │
- │ MRR                   │
- └───────────────────────┘
+TF-IDF lexical similarity
++
+Semantic embedding similarity
+↓
+Score Normalization (Min-Max)
+↓
+Weighted Score Fusion (α)
+↓
+Hybrid relevance score
+↓
+Final Top-K ranking
+↓
+Existing Extractive QA Engine
 ```
 
-> **Evaluation Principle:** Benchmarking is strictly empirical and objective. The system reports measured metrics without subjective rankings or arbitrary scores.
+The application continues to support all three retrieval paradigms:
+- **TF-IDF** (Lexical matching via n-gram cosine similarity)
+- **Semantic Embeddings** (Dense neural embeddings via `all-MiniLM-L6-v2`)
+- **Hybrid** (Combined lexical + semantic score fusion)
 
 ---
 
-## Phase 6 — Retrieval Evaluation
+## Phase 7 Architecture
 
-### 1. Why Retrieval Evaluation is Required
-In earlier phases, retrieval quality was assessed qualitatively via manual queries. However, system development requires quantitative, reproducible benchmarks to answer:
-* How often does a retriever find the relevant chunk in its top-1, top-3, or top-5 candidates?
-* How early in the ranked list does the first relevant passage appear?
-* How do lexical (TF-IDF) and dense semantic methods differ across distinct query patterns (exact keyword vs. paraphrased vs. conceptual questions)?
-
-Retrieval evaluation provides empirical evidence to understand algorithm behavior without relying on subjective impressions.
-
-### 2. Ground-Truth Evaluation Dataset
-The benchmark uses `evaluation/qa_dataset.json`, where every query is manually curated and mapped to verified ground-truth chunk IDs produced by the Phase 2 chunking pipeline:
-
-```json
-[
-  {
-    "id": "q001",
-    "question": "What is Natural Language Processing?",
-    "category": "definition",
-    "relevant_chunk_ids": [
-      "page_1_chunk_1"
-    ],
-    "relevant_pages": [1],
-    "source": "sample_document.pdf"
-  }
-]
+```text
+                    Question
+                       ↓
+              ┌────────┴────────┐
+              ↓                 ↓
+           TF-IDF           Semantic
+          Retrieval          Retrieval
+              ↓                 ↓
+          Lexical Score    Semantic Score
+              └────────┬────────┘
+                       ↓
+              Candidate Pool Union
+                       ↓
+             Score Normalization
+                       ↓
+                 Score Fusion (α)
+                       ↓
+                Hybrid Ranking
+                       ↓
+                     Top-K
+                       ↓
+             Extractive QA Engine
+                       ↓
+              Exact Answer + Proof
 ```
-
-#### Supported Linguistic Categories:
-* `exact_keyword`: Questions containing identical keywords and surface phrasing as the source text.
-* `paraphrased`: Questions expressing the concept using synonyms or alternative syntactic structures without exact surface overlap.
-* `conceptual`: Questions probing underlying mechanisms, architectural rationale, or methodology.
-* `definition`: Questions asking for the formal scope or definition of a domain term.
-* `factual`: Questions seeking specific stated facts or documented attributes.
-* `numeric`: Questions regarding numbers, counts, or quantities.
-
-### 3. Evaluation Metrics
-
-#### Hit@K
-A query is considered a hit (value `1`) if at least one ground-truth relevant chunk appears within the top $K$ retrieved passages; otherwise `0`.
-
-$$\text{Hit@K} = \begin{cases} 1 & \text{if } \text{Top-K}(\mathbf{q}) \cap \text{Relevant}(\mathbf{q}) \neq \emptyset \\ 0 & \text{otherwise} \end{cases}$$
-
-$$\text{Hit Rate@K} = \frac{1}{|\mathcal{Q}|} \sum_{q \in \mathcal{Q}} \text{Hit@K}(q)$$
-
-#### Precision@K
-Measures the proportion of retrieved chunks within the top $K$ candidates that are relevant:
-
-$$\text{Precision@K} = \frac{|\text{Top-K}(\mathbf{q}) \cap \text{Relevant}(\mathbf{q})|}{K}$$
-
-#### Recall@K
-Measures the proportion of all ground-truth relevant chunks that were successfully retrieved in the top $K$:
-
-$$\text{Recall@K} = \frac{|\text{Top-K}(\mathbf{q}) \cap \text{Relevant}(\mathbf{q})|}{|\text{Relevant}(\mathbf{q})|}$$
-
-#### Mean Reciprocal Rank (MRR)
-Evaluates how high in the ranking the first relevant chunk appears. If the first relevant chunk appears at 1-based rank $r$:
-$$\text{RR}(q) = \frac{1}{r} \quad (\text{or } 0 \text{ if no relevant chunk is retrieved})$$
-
-$$\text{MRR} = \frac{1}{|\mathcal{Q}|} \sum_{q \in \mathcal{Q}} \text{RR}(q)$$
 
 ---
 
-## Empirical Benchmark Results
+## Why Hybrid Retrieval?
 
-> **Academic Rule:** The system reports measured experimental values directly. Algorithm characteristics are distinguished from measured empirical results below.
+1. **Lexical Matching (TF-IDF)** excels when queries contain exact proper nouns, specialized acronyms, identifiers, or specific keywords. However, it fails when the user paraphrases or uses synonyms.
+2. **Dense Semantic Embeddings (Sentence Transformers)** excel at capturing semantic intent, contextual meaning, and paraphrased formulations, but can occasionally over-generalize or assign lower rank to precise lexical matches.
+3. **Hybrid Retrieval** combines both signals:
+   - Preserves high rank for exact keyword matches via the TF-IDF channel.
+   - Recovers semantic meaning for paraphrased and conceptual queries via the embedding channel.
+   - Provides explainability through exposed component scores (`tfidf_score`, `semantic_score`, `normalized_tfidf_score`, `normalized_semantic_score`, `hybrid_score`).
 
-### Measured Results on `sample_document.pdf` (15 Questions, K = [1, 3, 5])
+---
 
-```text
-==================================================
-Metric           TF-IDF       Semantic    
---------------------------------------------------
-Hit@1            0.8000       0.9333      
-Hit@3            1.0000       1.0000      
-Hit@5            1.0000       1.0000      
-Precision@5      0.2133       0.2133      
-Recall@5         1.0000       1.0000      
-MRR              0.8889       0.9667      
-==================================================
-```
+## Mathematical Formulation & Design Details
 
-### Measured Category Breakdown:
+### 1. Score Normalization (Min-Max)
+Raw TF-IDF and semantic similarity scores have distinct distributions and dynamic ranges. Before fusion, raw scores across the candidate pool are normalized into $[0.0, 1.0]$ using deterministic min-max scaling:
 
-| Category | Queries | TF-IDF Hit@5 | Semantic Hit@5 | TF-IDF MRR | Semantic MRR |
+$$\text{NormalizedScore}(c) = \frac{\text{Score}(c) - \min(\text{Scores})}{\max(\text{Scores}) - \min(\text{Scores})}$$
+
+**Division-by-Zero Handling:**
+When all candidates in the candidate pool have identical scores ($\max(\text{Scores}) == \min(\text{Scores})$):
+- If $\max(\text{Scores}) > 0$, the normalized score is set to `1.0` (all candidates have tied positive similarity).
+- If $\max(\text{Scores}) == 0$, the normalized score is set to `0.0`.
+
+### 2. Candidate Union Strategy
+Rather than restricting evaluation to the intersection of candidate lists ($A \cap B$), the hybrid retriever pools the **union** of relevant candidates from both underlying retrieval engines ($A \cup B$):
+
+$$\text{CandidatePool} = \text{Top-K}_{\text{TF-IDF}} \cup \text{Top-K}_{\text{Semantic}}$$
+
+This ensures that a passage discovered exclusively by one engine (e.g. an exact lexical match missed by semantic search, or a paraphrased passage with zero lexical overlap) remains fully eligible for the final ranking.
+
+### 3. Missing Score Handling
+When a candidate appears in one retriever's candidate set but is absent from the other:
+- If present in TF-IDF only: $\text{RawSemanticScore} = 0.0$.
+- If present in Semantic only: $\text{RawTFIDFScore} = 0.0$.
+
+Missing scores are assigned `0.0` deterministically rather than an arbitrary high value, correctly reflecting the absence of evidence from that retrieval channel.
+
+### 4. Weighted Score Fusion
+The final hybrid relevance score is computed as a convex combination parametrized by $\alpha \in [0.0, 1.0]$:
+
+$$\text{HybridScore} = \alpha \times \text{NormalizedTFIDF} + (1 - \alpha) \times \text{NormalizedSemantic}$$
+
+- **$\alpha = 0.50$ (Default):** Equal contribution from lexical and semantic channels.
+- **$\alpha = 1.00$:** Purely lexical TF-IDF ranking behavior.
+- **$\alpha = 0.00$:** Purely semantic embedding ranking behavior.
+- Configurable dynamically both via the `HybridRetriever(alpha=...)` constructor and the `search(alpha=...)` query override. Invalid weights outside $[0.0, 1.0]$ are strictly rejected.
+
+### 5. Metadata Preservation & Explainability
+Every retrieved passage preserves all Phase 2 metadata (`chunk_id`, `source`, `page`, `original_text`, `cleaned_text`) and exposes complete explainability scores:
+- `tfidf_score`: Raw cosine similarity from TF-IDF vectorizer.
+- `semantic_score`: Raw cosine similarity from Sentence Transformer embeddings.
+- `normalized_tfidf_score`: Min-max scaled TF-IDF score in $[0.0, 1.0]$.
+- `normalized_semantic_score`: Min-max scaled semantic score in $[0.0, 1.0]$.
+- `hybrid_score`: Final combined relevance score in $[0.0, 1.0]$.
+- `similarity_score`: Alias of `hybrid_score` providing seamless compatibility with `ExtractiveQAEngine`.
+
+---
+
+## Empirical Benchmark Results (Phase 7)
+
+All metrics are empirically calculated from `evaluation/qa_dataset.json` (15 verified questions) on `sample_document.pdf` across cutoff ranks $K \in [1, 3, 5]$ using `evaluation/run_benchmark.py`.
+
+### 1. Comparative Performance Across All Methods
+
+| Metric | TF-IDF | Semantic | Hybrid ($\alpha=0.25$) | Hybrid ($\alpha=0.50$) | Hybrid ($\alpha=0.75$) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **exact_keyword** | 2 | 1.00 | 1.00 | 1.0000 | 1.0000 |
-| **definition** | 2 | 1.00 | 1.00 | 1.0000 | 1.0000 |
-| **factual** | 3 | 1.00 | 1.00 | 1.0000 | 1.0000 |
-| **conceptual** | 4 | 1.00 | 1.00 | 0.8750 | 1.0000 |
-| **numeric** | 1 | 1.00 | 1.00 | 0.5000 | 1.0000 |
-| **paraphrased** | 3 | 1.00 | 1.00 | 0.7778 | 0.8333 |
+| **Hit@1** | 0.8000 | 0.9333 | 0.9333 | **0.9333** | 0.8667 |
+| **Hit@3** | 1.0000 | 1.0000 | 1.0000 | **1.0000** | 1.0000 |
+| **Hit@5** | 1.0000 | 1.0000 | 1.0000 | **1.0000** | 1.0000 |
+| **Precision@5** | 0.2133 | 0.2133 | 0.2133 | **0.2133** | 0.2133 |
+| **Recall@5** | 1.0000 | 1.0000 | 1.0000 | **1.0000** | 1.0000 |
+| **MRR** | 0.8889 | 0.9667 | 0.9667 | **0.9667** | 0.9333 |
 
-### Observations from Measured Data:
-1. On `exact_keyword`, `definition`, and `factual` queries where exact terms are preserved, both TF-IDF and Semantic retrieval achieve an MRR of 1.0000.
-2. On `paraphrased` queries where wording differs from the source text, Semantic retrieval measured higher reciprocal ranks (MRR: 0.8333 vs. 0.7778).
-3. On `conceptual` queries, Semantic retrieval consistently placed the relevant chunk at rank 1 (MRR: 1.0000 vs. 0.8750).
-4. Both methods achieved 100% Hit Rate at $K=3$ and $K=5$ on this document collection.
+### 2. Hybrid Weight Experiment ($\alpha = 0.25$ vs. $0.50$ vs. $0.75$)
 
----
+| Weight ($\alpha$) | Configuration Focus | Hit@1 | Hit@3 | Hit@5 | Precision@5 | Recall@5 | MRR |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **0.25** | Stronger Semantic Influence | 0.9333 | 1.0000 | 1.0000 | 0.2133 | 1.0000 | 0.9667 |
+| **0.50** | Balanced Equal Contribution (Default) | 0.9333 | 1.0000 | 1.0000 | 0.2133 | 1.0000 | 0.9667 |
+| **0.75** | Stronger Lexical Influence | 0.8667 | 1.0000 | 1.0000 | 0.2133 | 1.0000 | 0.9333 |
 
-## Features
+### 3. Category Breakdown (Hybrid $\alpha=0.50$ vs. Baselines)
 
-### Phase 1: Ingestion & Text Preprocessing
-* **PDF Upload & Validation:** Securely accepts `.pdf` documents via Streamlit, with validation for empty files, corrupted streams, and unreadable formats.
-* **Page-wise Text Extraction:** Utilizes PyMuPDF (`fitz`) to extract text page-by-page while strictly preserving 1-indexed page numbers.
-* **Non-destructive Text Cleaning:** Normalizes horizontal spaces, trims blank lines, cleans control/non-printable characters, and standardizes paragraph breaks without modifying original text.
-* **NLTK Tokenization:** Segments cleaned text into words and punctuation tokens using NLTK `word_tokenize`.
-* **Stop-word Removal:** Removes English stop words (via `nltk.corpus.stopwords`) while preserving original token casing.
+| Category | Queries | Hybrid Hit@5 | Hybrid MRR | TF-IDF MRR | Semantic MRR |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **conceptual** | 4 | 1.0000 | **1.0000** | 0.8750 | 1.0000 |
+| **definition** | 2 | 1.0000 | **1.0000** | 1.0000 | 1.0000 |
+| **exact_keyword** | 2 | 1.0000 | **1.0000** | 1.0000 | 1.0000 |
+| **factual** | 3 | 1.0000 | **1.0000** | 1.0000 | 1.0000 |
+| **numeric** | 1 | 1.0000 | **1.0000** | 0.5000 | 1.0000 |
+| **paraphrased** | 3 | 1.0000 | **0.8333** | 0.7778 | 0.8333 |
 
-### Phase 2: Text Chunking & Retrieval Data Preparation
-* **Paragraph-Aware Hierarchy Chunking:** Chunks text using a natural boundary hierarchy:
-  1. *Paragraph boundary* (primary semantic unit)
-  2. *Sentence boundary* (via NLTK `sent_tokenize` if a paragraph exceeds `chunk_size`)
-  3. *Word boundary* (if an individual sentence exceeds `chunk_size`)
-  4. *Character boundary* (fallback for giant continuous strings)
-* **Context-Preserving Chunk Overlap:** Carries forward a configurable overlap window between consecutive chunks at clean word boundaries.
-* **Dual Text Representation:**
-  * `original_text`: Exact human-readable passage with casing and punctuation, used to display retrieved evidence.
-  * `cleaned_text`: Normalized, lowercase, punctuation-filtered representation prepared for downstream vectorization.
-* **Strict Metadata Preservation:** Every chunk retains its `chunk_id` (`page_{n}_chunk_{m}`), `source` (filename), `page` (1-indexed), character count, and word count.
-* **Chunk Validation & Statistics:** Automated verification of uniqueness and data integrity, along with comprehensive chunk metrics.
-
-### Phase 3: Lexical Retrieval Engine (TF-IDF + Cosine Similarity)
-* **TF-IDF Vectorization:** Utilizes `scikit-learn`'s `TfidfVectorizer` (with unigram + bigram support and sublinear TF scaling) fitted once over the chunk collection corpus.
-* **Symmetric Question Preprocessing:** Normalizes user queries through the exact same preprocessing pipeline used on chunks.
-* **Cosine Similarity Scoring:** Measures the angular orientation between the query TF-IDF vector and all chunk vectors in $[0.0, 1.0]$.
-* **Relevance Ranking & Thresholding:** Ranks retrieved chunks in descending order of similarity score and excludes passages below a configurable cutoff (default: `0.10`).
-
-### Phase 4: Question Answering (Extractive, Retrieval-Grounded QA)
-* **Extractive Answer Formulation:** Analyzes candidate sentences from the top retrieved passages and extracts the exact factual answer sentence(s) without generating synthetic text.
-* **Multi-Factor Sentence Scoring:** Lexical overlap ratio, sentence-level cosine similarity, answer-type cues, and retrieval confidence prior.
-* **Concise Multi-Sentence Answers:** Dynamically joins adjacent highly relevant sentences up to a configurable maximum (default: 2 sentences).
-* **Strict Document Grounding:** If retrieval returns no chunks above the similarity threshold, the QA engine refuses to answer and reports that no sufficiently relevant information was found.
-* **Complete Source Attribution:** Every answer displays the source PDF filename, page number, chunk identifier, retrieval similarity score, and the exact `original_text` evidence passage.
-
-### Phase 5: Semantic Retrieval Enhancement
-* **Dense Embedding Retriever (`SemanticRetriever`):** Generates 384-dimensional normalized dense embeddings for document chunks using Sentence Transformers (`all-MiniLM-L6-v2`).
-* **Semantic Paraphrase Matching:** Pairs user queries with relevant passages even when wording, synonyms, or sentence structures differ.
-* **Dual Retrieval Mode Selector:** Toggle seamlessly between `Semantic Embeddings` (default) and `TF-IDF` via the UI without reloading documents.
-* **High-Performance In-Memory Search:** Vectorized dot-product cosine similarity computation.
-
-### Phase 6: Retrieval Evaluation & Benchmarking
-* **Standard IR Metrics:** Implementation of Hit@K, Precision@K, Recall@K, and Mean Reciprocal Rank (MRR).
-* **Objective Comparative Benchmark:** Side-by-side evaluation of TF-IDF and Semantic retrieval on identical evaluation sets and identical Top-K cutoffs.
-* **Category-Level Linguistic Analysis:** Aggregates metrics grouped by query category (`exact_keyword`, `paraphrased`, `conceptual`, `definition`, `factual`, `numeric`).
-* **Dataset Grounding & Validation:** Automated alignment checks verifying that evaluation chunk IDs correspond to valid document chunks.
-* **CSV Result Export:** Exports detailed query-level measurements (`evaluation/results.csv`) and comparative summary tables (`evaluation/summary.csv`).
-* **Interactive Streamlit UI:** Dedicated evaluation section with explicit execution trigger, metric highlights, drill-down breakdown, and download buttons.
+### Key Benchmark Findings:
+1. **Balanced Fusion ($\alpha=0.50$):** Achieves **0.9333 Hit@1** and **0.9667 MRR**, significantly improving over pure TF-IDF (0.8000 Hit@1, 0.8889 MRR) and matching Semantic retrieval.
+2. **Lexical Weight Sensitivity:** Shifting $\alpha$ from 0.50 to 0.75 (heavier lexical weight) yields a 0.8667 Hit@1 and 0.9333 MRR, demonstrating that semantic embeddings provide crucial disambiguation on paraphrased and conceptual questions while lexical signals remain effective for exact keywords.
+3. **100% Coverage at K=3 and K=5:** Across all configurations, Hit@3 and Hit@5 reach 1.0000, confirming that the candidate union ensures ground-truth passages are consistently present in the top retrieved set.
 
 ---
 
-## Technical Comparison: TF-IDF vs. Semantic Embeddings
+## Technical Comparison of All Retrieval Methods
 
-| Feature | TF-IDF Retrieval (Phase 3) | Semantic Embeddings (Phase 5) |
-| :--- | :--- | :--- |
-| **Representation** | High-dimensional, sparse lexical vectors | Low-dimensional (384-d), dense semantic vectors |
-| **Matching Basis** | Exact word & n-gram overlap | Learned contextual semantic similarity |
-| **Synonym Handling** | Limited (misses distinct terms with similar meaning) | Maps semantically related phrases closely |
-| **Paraphrase Resilience** | Vulnerable to surface rephrasing | High resilience to varying syntactic patterns |
-| **Computation Cost** | Extremely low CPU overhead | Moderate CPU overhead during chunk indexing (cached) |
-| **Model Footprint** | Zero external neural weights | Lightweight model weights (~80MB, cached locally) |
-| **Measured MRR (sample doc)** | `0.8889` | `0.9667` |
+| Feature | TF-IDF (Phase 3) | Semantic Embeddings (Phase 5) | Hybrid Retrieval (Phase 7) |
+| :--- | :--- | :--- | :--- |
+| **Representation** | High-dimensional sparse lexical vectors | Dense 384-d semantic embedding vectors | Combined sparse + dense normalized representations |
+| **Matching Basis** | Surface word & n-gram co-occurrence | Learned contextual similarity | Joint lexical overlap + contextual semantic match |
+| **Synonym Handling** | Limited (requires exact token match) | High (semantic space clustering) | Robust (semantic channel recovers synonyms) |
+| **Out-of-Vocab / Acronyms** | Strong for rare exact keywords | Can dilute rare exact tokens | Strong (lexical channel preserves exact matches) |
+| **Score Normalization** | Raw cosine similarity $[0.0, 1.0]$ | Unit-normalized dot product $[-1.0, 1.0]$ | Min-max scaled normalized fusion $[0.0, 1.0]$ |
+| **Candidate Sourcing** | Top-K lexical chunks | Top-K dense embedding chunks | Candidate union pool ($\text{TF-IDF} \cup \text{Semantic}$) |
+| **Tunable Balance** | Fixed lexical | Fixed semantic | Fully tunable $\alpha \in [0.0, 1.0]$ |
+| **Measured MRR** | `0.8889` | `0.9667` | `0.9667` ($\alpha=0.50$) |
+| **Measured Hit@1** | `0.8000` | `0.9333` | `0.9333` ($\alpha=0.50$) |
 
 ---
 
@@ -213,19 +183,20 @@ MRR              0.8889       0.9667
 ```text
 retrieval-qa/
 │
-├── app.py                     # Streamlit web application (Phases 1, 2, 3, 4, 5 & 6)
-├── requirements.txt           # Dependencies (streamlit, pymupdf, nltk, scikit-learn, sentence-transformers)
+├── app.py                     # Streamlit web application (Phases 1-7)
+├── requirements.txt           # Dependencies
 ├── README.md                  # Project documentation
 ├── .gitignore                 # Git ignore rules
 │
 ├── src/
-│   ├── __init__.py            # Package exports
+│   ├── __init__.py            # Package exports (retrievers, QA engine, evaluator)
 │   ├── pdf_processor.py       # PyMuPDF page-by-page text extraction (Phase 1)
 │   ├── text_processor.py      # Text cleaning, tokenization & stopwords (Phase 1)
 │   ├── chunker.py             # Semantic chunking, metadata & statistics (Phase 2)
 │   ├── retriever.py           # TF-IDF & Cosine Similarity retrieval (Phase 3)
 │   ├── qa_engine.py           # Extractive Question Answering engine (Phase 4)
 │   ├── semantic_retriever.py  # Dense Sentence Transformers retrieval (Phase 5)
+│   ├── hybrid_retriever.py    # Hybrid Lexical + Semantic retrieval (Phase 7)
 │   └── evaluator.py           # IR Evaluation & Benchmarking metrics (Phase 6)
 │
 ├── data/
@@ -234,44 +205,38 @@ retrieval-qa/
 │
 ├── evaluation/
 │   ├── qa_dataset.json        # Ground-truth evaluation dataset (15 queries)
-│   ├── results.csv            # Exported query-level evaluation results
-│   ├── summary.csv            # Exported method comparison summary
-│   ├── run_benchmark.py       # Standalone CLI evaluation runner
-│   └── README.md              # Dataset schema and chunk ID extraction documentation
+│   ├── results.csv            # Exported query-level evaluation results (with alpha)
+│   ├── summary.csv            # Exported method comparison summary (with alpha)
+│   ├── run_benchmark.py       # Standalone CLI evaluation runner (Phases 3, 5, 7)
+│   └── README.md              # Dataset schema and documentation
 │
 └── tests/
     ├── __init__.py
-    ├── test_phase1.py         # Automated test suite for Phase 1 (8 tests)
-    ├── test_phase2.py         # Automated test suite for Phase 2 (9 tests)
-    ├── test_phase3.py         # Automated test suite for Phase 3 (10 tests)
-    ├── test_phase4.py         # Automated test suite for Phase 4 (10 tests)
-    ├── test_semantic_retriever.py # Automated test suite for Phase 5 (10 tests)
-    └── test_evaluator.py      # Automated test suite for Phase 6 (14 tests)
+    ├── test_phase1.py             # Phase 1 test suite (8 tests)
+    ├── test_phase2.py             # Phase 2 test suite (9 tests)
+    ├── test_phase3.py             # Phase 3 test suite (10 tests)
+    ├── test_phase4.py             # Phase 4 test suite (10 tests)
+    ├── test_semantic_retriever.py # Phase 5 test suite (10 tests)
+    ├── test_evaluator.py          # Phase 6 test suite (14 tests)
+    └── test_hybrid_retriever.py   # Phase 7 test suite (18 tests)
 ```
 
 ---
 
-## Installation
+## Installation & Setup
 
-### 1. Clone or navigate to the repository
-```bash
-cd retrieval-qa
-```
-
-### 2. Create and activate a Python virtual environment
+### 1. Activate the virtual environment
 On Windows (PowerShell):
 ```powershell
-python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
 On macOS / Linux:
 ```bash
-python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install required dependencies
+### 2. Install dependencies (if needed)
 ```bash
 pip install -r requirements.txt
 ```
@@ -286,39 +251,48 @@ Launch the Streamlit web interface:
 streamlit run app.py
 ```
 
-Once started, open `http://localhost:8501` in your browser:
-1. Upload any PDF document (or use `data/uploads/sample_document.pdf`).
-2. In the **"Question Answering"** section, query the document via **Semantic Embeddings** or **TF-IDF**.
-3. In the **"Retrieval Evaluation & Benchmarking"** section, select the evaluation dataset and click **"Run Retrieval Evaluation"**.
-4. Inspect the comparative metrics table, category breakdown, per-question drilldown, and download CSV reports.
+### User Interface Features:
+1. **Retrieval Method Selector:** Choose between **Hybrid** (default), **Semantic Embeddings**, or **TF-IDF**.
+2. **Hybrid Lexical Weight ($\alpha$):** Slider in the sidebar to dynamically tune the balance between lexical and semantic signals (default: `0.50`).
+3. **Question Answering:** Enter any question; extracts exact factual sentence(s) with full source attribution.
+4. **Explainability Drill-down:** When Hybrid is selected, each retrieved passage card displays:
+   - Rank
+   - Hybrid Score
+   - TF-IDF Score
+   - Semantic Score
+   - Page, Chunk ID, Source, and Original Text
+5. **Interactive Benchmarking:** Run side-by-side evaluation directly within the UI and download `results.csv` and `summary.csv`.
 
 ---
 
 ## Running Automated Tests
 
-Run the complete automated test suite across all 6 phases (**61 tests**):
+Run the complete test suite across all 7 phases (**79 tests**):
 
 ```bash
 python -m unittest discover tests
 ```
 
-To run individual phase test suites:
+To run individual test suites:
 
 ```bash
-python -m unittest tests/test_evaluator.py
-python -m unittest tests/test_semantic_retriever.py
-python -m unittest tests/test_phase4.py
-python -m unittest tests/test_phase3.py
-python -m unittest tests/test_phase2.py
-python -m unittest tests/test_phase1.py
+python -m unittest tests/test_hybrid_retriever.py   # Phase 7 Hybrid (18 tests)
+python -m unittest tests/test_evaluator.py          # Phase 6 Evaluation (14 tests)
+python -m unittest tests/test_semantic_retriever.py # Phase 5 Semantic (10 tests)
+python -m unittest tests/test_phase4.py             # Phase 4 QA Engine (10 tests)
+python -m unittest tests/test_phase3.py             # Phase 3 TF-IDF (10 tests)
+python -m unittest tests/test_phase2.py             # Phase 2 Chunking (9 tests)
+python -m unittest tests/test_phase1.py             # Phase 1 Ingestion (8 tests)
 ```
 
 ---
 
-## Running the Evaluation Benchmark from CLI
+## Running the CLI Evaluation Benchmark
 
-To benchmark retrieval engines from the terminal and export CSV metrics:
+To execute the benchmark runner comparing TF-IDF, Semantic, and Hybrid retrieval across multiple weights:
 
 ```bash
 python evaluation/run_benchmark.py
 ```
+
+Outputs comprehensive metric tables to the console and updates `evaluation/results.csv` and `evaluation/summary.csv`.

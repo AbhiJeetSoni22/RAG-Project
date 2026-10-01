@@ -10,10 +10,15 @@ from __future__ import annotations
 
 import io
 import logging
-import streamlit as st
-
+import sys
 from pathlib import Path
+import streamlit as st
 import pandas as pd
+
+# Ensure project root is in sys.path
+PROJECT_ROOT = str(Path(__file__).resolve().parent)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from src.pdf_processor import extract_text_from_pdf, PDFProcessingError
 from src.text_processor import (
@@ -42,6 +47,10 @@ from src.semantic_retriever import (
     get_sentence_transformer,
     SemanticRetrievalError,
     DEFAULT_MODEL_NAME,
+)
+from src.hybrid_retriever import (
+    HybridRetriever,
+    HybridRetrievalError,
 )
 from src.evaluator import (
     load_evaluation_dataset,
@@ -379,16 +388,16 @@ st.markdown(
 
 def render_header() -> None:
     """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 6 &bull; Retrieval Evaluation & Benchmarking</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge-phase">Phase 7 &bull; Hybrid Retrieval (ACTIVE)</span>', unsafe_allow_html=True)
     st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sub-title">Upload a PDF, retrieve passages via Semantic Embeddings or TF-IDF, extract grounded answers, and objectively benchmark retrieval performance across standard IR metrics.</div>',
+        '<div class="sub-title">Upload a PDF, retrieve passages via Hybrid Retrieval (TF-IDF + Semantic Embeddings), extract grounded answers, and objectively benchmark retrieval performance across standard IR metrics.</div>',
         unsafe_allow_html=True,
     )
 
 
 
-def render_sidebar() -> tuple[int, int, str, int, float, int]:
+def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
     """Render sidebar controls for configurable chunking, retrieval, and QA parameters."""
     with st.sidebar:
         st.markdown("### ⚙️ Engine Configuration")
@@ -415,14 +424,26 @@ def render_sidebar() -> tuple[int, int, str, int, float, int]:
         )
 
         st.markdown("---")
-        st.markdown("#### 🔍 Phase 3 & 5: Retrieval")
+        st.markdown("#### 🔍 Phase 3, 5 & 7: Retrieval")
         retrieval_method = st.radio(
             "Retrieval Method",
-            options=["Semantic Embeddings", "TF-IDF"],
+            options=["Hybrid", "Semantic Embeddings", "TF-IDF"],
             index=0,
-            help="Select the retrieval algorithm: Semantic Embeddings (Sentence Transformers all-MiniLM-L6-v2) or Lexical TF-IDF + Cosine Similarity.",
+            help="Select retrieval engine: Hybrid (TF-IDF + Semantic Embeddings), Semantic Embeddings (Sentence Transformers all-MiniLM-L6-v2), or Lexical TF-IDF.",
             key="cfg_retrieval_method",
         )
+
+        hybrid_alpha = 0.50
+        if retrieval_method == "Hybrid":
+            hybrid_alpha = st.slider(
+                "Hybrid Lexical Weight (α)",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.50,
+                step=0.05,
+                help="Weight α for lexical TF-IDF score vs (1 - α) for Semantic embedding score (0.0 = purely Semantic, 1.0 = purely TF-IDF).",
+                key="cfg_hybrid_alpha",
+            )
 
         top_k = st.slider(
             "Top-K Retrieved Passages",
@@ -462,18 +483,18 @@ def render_sidebar() -> tuple[int, int, str, int, float, int]:
             """
             * **Strategy:** Extractive / Retrieval-grounded
             * **Principle:** Retrieve first $\\rightarrow$ Answer only from evidence
-            * **Retriever:** Semantic Embeddings or TF-IDF
+            * **Retriever:** Hybrid, Semantic Embeddings, or TF-IDF
             * **Safety:** Never answers if no evidence exists in the document
             * **No LLM / Hallucinations:** 100% deterministic NLP extraction
             """
         )
 
-    return chunk_size, chunk_overlap, retrieval_method, top_k, min_similarity, max_sentences
+    return chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences
 
 
 def main() -> None:
     """Main application loop."""
-    chunk_size, chunk_overlap, retrieval_method, top_k, min_similarity, max_sentences = render_sidebar()
+    chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences = render_sidebar()
     render_header()
 
     # Upload Section
@@ -552,9 +573,9 @@ def main() -> None:
         st.error(f"❌ An unexpected error occurred during chunking: {exc}")
         return
 
-    # Phase 3 & Phase 5: Index Document Chunks for TF-IDF and Semantic Retrieval
+    # Phase 3, 5 & 7: Index Document Chunks for TF-IDF, Semantic, and Hybrid Retrieval
     try:
-        with st.spinner("Step 3: Indexing document chunks for TF-IDF and Semantic retrieval..."):
+        with st.spinner("Step 3: Indexing document chunks for TF-IDF, Semantic, and Hybrid retrieval..."):
             tfidf_retriever = TFIDFRetriever(chunks)
 
             # Initialize Semantic Retriever with cached SentenceTransformer and cached embeddings
@@ -568,7 +589,15 @@ def main() -> None:
                 model=transformer_model,
                 chunk_embeddings=cached_chunk_embs,
             )
-    except (RetrievalError, SemanticRetrievalError) as r_err:
+
+            # Initialize Hybrid Retriever reusing existing instances
+            hybrid_retriever = HybridRetriever(
+                chunks=chunks,
+                alpha=hybrid_alpha,
+                tfidf_retriever=tfidf_retriever,
+                semantic_retriever=semantic_retriever,
+            )
+    except (RetrievalError, SemanticRetrievalError, HybridRetrievalError) as r_err:
         logger.error(f"Retriever initialization error: {r_err}", exc_info=True)
         st.error(f"❌ Retrieval Engine Error: {r_err}")
         return
@@ -598,6 +627,7 @@ def main() -> None:
                 <div class="status-item"><span class="status-check">✓</span> Text chunking completed ({len(chunks)} chunks)</div>
                 <div class="status-item"><span class="status-check">✓</span> TF-IDF vectorizer indexed ({len(chunks)} passages)</div>
                 <div class="status-item"><span class="status-check">✓</span> Semantic embeddings indexed ({len(chunks)} passages &bull; all-MiniLM-L6-v2)</div>
+                <div class="status-item"><span class="status-check">✓</span> Hybrid retriever indexed ({len(chunks)} passages &bull; α={hybrid_alpha:.2f})</div>
                 <div class="status-item"><span class="status-check">✓</span> <b>Extractive QA Engine ready</b></div>
                 <div class="status-item"><span class="status-check">✓</span> <b>Retrieval Evaluation Framework ready</b></div>
             </div>
@@ -653,8 +683,8 @@ def main() -> None:
     with col_method:
         selected_method = st.selectbox(
             "Retrieval Method",
-            options=["Semantic Embeddings", "TF-IDF"],
-            index=0 if retrieval_method == "Semantic Embeddings" else 1,
+            options=["Hybrid", "Semantic Embeddings", "TF-IDF"],
+            index=0 if retrieval_method == "Hybrid" else (1 if retrieval_method == "Semantic Embeddings" else 2),
             help="Choose which retrieval engine provides candidate passages to the extractive QA engine.",
             key="qa_retrieval_method_select",
         )
@@ -681,11 +711,12 @@ def main() -> None:
         else:
             with st.spinner(f"Retrieving passages via {selected_method} and extracting grounded answer..."):
                 # Select active retriever
-                active_retriever = (
-                    semantic_retriever
-                    if selected_method == "Semantic Embeddings"
-                    else tfidf_retriever
-                )
+                if selected_method == "Hybrid":
+                    active_retriever = hybrid_retriever
+                elif selected_method == "Semantic Embeddings":
+                    active_retriever = semantic_retriever
+                else:
+                    active_retriever = tfidf_retriever
 
                 # Retrieve top-k chunks
                 retrieved_results = active_retriever.search(
@@ -717,6 +748,7 @@ def main() -> None:
                 )
 
                 # Requirement 12: Source Attribution Section
+                score_label = "Hybrid Score" if selected_method == "Hybrid" else "Retrieval Similarity"
                 st.markdown(
                     f"""
                     <div class="source-container">
@@ -725,7 +757,7 @@ def main() -> None:
                         <span class="meta-tag"><b>Document:</b> {qa_result['source']}</span>
                         <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
                         <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
-                        <span class="meta-tag"><b>Retrieval Similarity:</b> {qa_result['similarity_score'] * 100:.2f}%</span>
+                        <span class="meta-tag"><b>{score_label}:</b> {qa_result['similarity_score'] * 100:.2f}%</span>
                         <span class="meta-tag"><b>Sentence Score:</b> {qa_result['sentence_score']:.2f}</span>
                     </div>
                     """,
@@ -760,7 +792,7 @@ def main() -> None:
                 )
 
             # =================================================================
-            # Requirement 14 & Phase 5: Top Retrieved Passages Section
+            # Requirement 14 & Phase 7: Top Retrieved Passages Section
             # =================================================================
             with st.expander(f"🔍 Top Retrieved Passages ({selected_method})", expanded=False):
                 st.caption(
@@ -781,16 +813,32 @@ def main() -> None:
                         else:
                             sim_class = "similarity-low"
 
+                        # Section 9: For Hybrid show Rank, Hybrid Score, TF-IDF Score, Semantic Score, Page, Chunk ID, Source
+                        if selected_method == "Hybrid":
+                            meta_scores_html = f"""
+                                <span class="rank-pill">Rank #{rank}</span>
+                                <span class="similarity-pill {sim_class}">Hybrid: {res.get('hybrid_score', score):.4f} ({pct_str})</span>
+                                <span class="meta-tag"><b>TF-IDF:</b> {res.get('tfidf_score', 0.0):.4f}</span>
+                                <span class="meta-tag"><b>Semantic:</b> {res.get('semantic_score', 0.0):.4f}</span>
+                                <span class="meta-tag"><b>Page:</b> {res['page']}</span>
+                                <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                <span class="meta-tag"><b>Source:</b> {res.get('source', '')}</span>
+                            """
+                        else:
+                            meta_scores_html = f"""
+                                <span class="rank-pill">Rank #{rank}</span>
+                                <span class="similarity-pill {sim_class}">Similarity: {score:.4f} ({pct_str})</span>
+                                <span class="meta-tag"><b>Page:</b> {res['page']}</span>
+                                <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
+                                <span class="meta-tag"><b>Source:</b> {res.get('source', '')}</span>
+                                <span class="meta-tag"><b>Chars:</b> {res.get('char_count', len(res['original_text']))}</span>
+                            """
+
                         st.markdown(
                             f"""
                             <div class="result-card">
                                 <div class="result-header">
-                                    <span class="rank-pill">Rank #{rank}</span>
-                                    <span class="similarity-pill {sim_class}">Similarity: {score:.4f} ({pct_str})</span>
-                                    <span class="meta-tag"><b>Page:</b> {res['page']}</span>
-                                    <span class="meta-tag"><b>Chunk:</b> <code>{res['chunk_id']}</code></span>
-                                    <span class="meta-tag"><b>Source:</b> {res.get('source', '')}</span>
-                                    <span class="meta-tag"><b>Chars:</b> {res.get('char_count', len(res['original_text']))}</span>
+                                    {meta_scores_html}
                                 </div>
                                 <div class="passage-box">{res['original_text']}</div>
                             </div>
@@ -898,13 +946,14 @@ def main() -> None:
         elif not eval_k_values:
             st.error("⚠️ Please select at least one K value for evaluation.")
         else:
-            with st.spinner("Benchmarking TF-IDF and Semantic Retrievers across evaluation dataset..."):
+            with st.spinner("Benchmarking TF-IDF, Semantic, and Hybrid Retrievers across evaluation dataset..."):
                 try:
                     comparison_result = compare_retrieval_methods(
                         questions=loaded_questions,
                         retrievers={
                             "TF-IDF": tfidf_retriever,
                             "Semantic": semantic_retriever,
+                            "Hybrid": hybrid_retriever,
                         },
                         k_values=eval_k_values,
                         min_similarity=eval_min_sim,
@@ -929,46 +978,41 @@ def main() -> None:
         ])
 
         with t_overall:
-            st.caption("Standardized Information Retrieval metrics comparing Lexical TF-IDF and Dense Semantic retrieval across the dataset.")
+            st.caption("Standardized Information Retrieval metrics comparing Lexical TF-IDF, Dense Semantic, and Hybrid retrieval across the dataset.")
 
             df_metrics = pd.DataFrame(eval_res.overall_metrics_table)
-            if "TF-IDF" in df_metrics.columns and "Semantic" in df_metrics.columns:
-                df_metrics["Difference (Semantic - TF-IDF)"] = (
-                    df_metrics["Semantic"] - df_metrics["TF-IDF"]
-                ).map(lambda v: f"{v:+.4f}")
-
             st.dataframe(df_metrics, use_container_width=True, hide_index=True)
 
             # High-level metric highlights
+            hybrid_summary = eval_res.summaries.get("Hybrid")
             tfidf_summary = eval_res.summaries.get("TF-IDF")
             semantic_summary = eval_res.summaries.get("Semantic")
-            if tfidf_summary and semantic_summary:
+            highlight_summary = hybrid_summary or semantic_summary
+
+            if highlight_summary:
                 eval_max_k = max(eval_res.k_values)
+                hl_name = "Hybrid" if hybrid_summary else "Semantic"
                 c_m1, c_m2, c_m3, c_m4 = st.columns(4)
                 with c_m1:
                     st.metric(
-                        f"Hit@{eval_max_k} (Semantic vs TF-IDF)",
-                        f"{semantic_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
-                        f"{(semantic_summary.hit_rates.get(eval_max_k, 0.0) - tfidf_summary.hit_rates.get(eval_max_k, 0.0)):+.4f} vs TF-IDF ({tfidf_summary.hit_rates.get(eval_max_k, 0.0):.4f})",
+                        f"Hit@{eval_max_k} ({hl_name})",
+                        f"{highlight_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
                     )
                 with c_m2:
                     st.metric(
-                        "MRR (Semantic vs TF-IDF)",
-                        f"{semantic_summary.mrr:.4f}",
-                        f"{(semantic_summary.mrr - tfidf_summary.mrr):+.4f} vs TF-IDF ({tfidf_summary.mrr:.4f})",
+                        f"MRR ({hl_name})",
+                        f"{highlight_summary.mrr:.4f}",
                     )
                 with c_m3:
                     st.metric(
-                        f"Precision@{eval_max_k}",
-                        f"{semantic_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
-                        f"TF-IDF: {tfidf_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
+                        f"Precision@{eval_max_k} ({hl_name})",
+                        f"{highlight_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
                         delta_color="off",
                     )
                 with c_m4:
                     st.metric(
-                        f"Recall@{eval_max_k}",
-                        f"{semantic_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
-                        f"TF-IDF: {tfidf_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
+                        f"Recall@{eval_max_k} ({hl_name})",
+                        f"{highlight_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
                         delta_color="off",
                     )
 
