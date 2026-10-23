@@ -252,24 +252,17 @@ streamlit run app.py
 ```
 
 ### User Interface Features:
-1. **Interface Theme Selector:** Toggle seamlessly between **Dark Theme** (default) and **Light Theme** (clean NLP research palette) at the top of the sidebar without losing document or query state.
-2. **Retrieval Method Selector:** Choose between **Hybrid** (default), **Semantic Embeddings**, or **TF-IDF**.
-3. **Hybrid Lexical Weight ($\alpha$):** Slider in the sidebar to dynamically tune the balance between lexical and semantic signals (default: `0.50`).
-4. **Question Answering:** Enter any question; extracts exact factual sentence(s) with full source attribution.
-5. **Explainability Drill-down:** When Hybrid is selected, each retrieved passage card displays:
+1. **Retrieval Method Selector:** Choose between **Hybrid** (default), **Semantic Embeddings**, or **TF-IDF**.
+2. **Hybrid Lexical Weight ($\alpha$):** Slider in the sidebar to dynamically tune the balance between lexical and semantic signals (default: `0.50`).
+3. **Question Answering:** Enter any question; extracts exact factual sentence(s) with full source attribution.
+4. **Explainability Drill-down:** When Hybrid is selected, each retrieved passage card displays:
    - Rank
    - Hybrid Score
    - TF-IDF Score
    - Semantic Score
    - Page, Chunk ID, Source, and Original Text
-6. **Interactive Benchmarking:** Run side-by-side evaluation directly within the UI and download `results.csv` and `summary.csv`.
-
-### Theme Support (Dark & Light Mode)
-The application provides full native support for both **Dark Theme** and **Light Theme**:
-- **Where to Switch:** Located under **🎨 Theme** at the very top of the Streamlit sidebar.
-- **Appearance & Palette:** Dark Theme preserves the original high-contrast styling. Light Theme provides an accessible, polished interface designed for document reading and research (background `#F8FAFC`, cards `#FFFFFF`, primary text `#0F172A`, secondary text `#475569`, and accent `#2563EB`).
-- **Session State Persistence:** The active theme is stored in `st.session_state` and persists throughout the session.
-- **State Preservation:** Switching themes never resets or clears the uploaded PDF, entered question, retrieved passages, extractive answers, or benchmark evaluation results.
+5. **Interactive Benchmarking:** Run side-by-side evaluation directly within the UI and download `results.csv` and `summary.csv`.
+6. **Clean Light Theme:** Built with a high-contrast, accessible NLP research design palette (slate canvas `#F8FAFC`, cards `#FFFFFF`, primary text `#0F172A`, secondary text `#475569`, and accent `#2563EB`).
 
 ---
 
