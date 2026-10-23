@@ -95,14 +95,27 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for modern styling, clean hierarchy, and premium readability
-st.markdown(
-    """
-    <style>
+# Theme Definitions
+DARK_THEME_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .stApp, [data-testid="stAppViewContainer"] {
+        background-color: #0E1117;
+        color: #F8FAFC;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: rgba(14, 17, 23, 0.95);
+        color: #F8FAFC;
+    }
+
+    section[data-testid="stSidebar"], [data-testid="stSidebar"] > div {
+        background-color: #262730;
+        color: #F8FAFC;
     }
 
     .main-title {
@@ -380,10 +393,725 @@ st.markdown(
         padding: 0.2rem 0.55rem;
         border-radius: 0.375rem;
     }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+
+    .preview-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.65rem;
+        height: 100%;
+    }
+
+    .preview-card-title {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #1d4ed8;
+    }
+
+    .preview-card-meta {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: 0.2rem;
+    }
+
+    .preview-card-text {
+        font-size: 0.75rem;
+        color: #334155;
+        margin-top: 0.35rem;
+        line-height: 1.25;
+        max-height: 55px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .token-chip-container {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.6rem;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .token-chip {
+        background: #e2e8f0;
+        color: #1e293b;
+        border: 1px solid #cbd5e1;
+        display: inline-block;
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.25rem;
+        font-size: 0.78rem;
+        font-family: 'Fira Code', monospace;
+        margin: 0.15rem;
+    }
+
+    .token-chip.filtered {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+    }
+"""
+
+LIGHT_THEME_CSS = """
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+    html, body, [class*="css"], .stApp {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+
+    /* 1. Main Background and Content Area */
+    .stApp, [data-testid="stAppViewContainer"], .main, .main .block-container {
+        background-color: #F8FAFC !important;
+        color: #0F172A !important;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: rgba(248, 250, 252, 0.95) !important;
+        color: #0F172A !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+    }
+
+    [data-testid="stToolbar"] {
+        color: #0F172A !important;
+    }
+
+    /* 2. Sidebar and Sidebar Controls */
+    section[data-testid="stSidebar"], [data-testid="stSidebar"] > div {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E2E8F0 !important;
+    }
+
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] h4,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div {
+        color: #0F172A !important;
+    }
+
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] .stMarkdown p {
+        color: #334155 !important;
+    }
+
+    section[data-testid="stSidebar"] hr {
+        border-color: #E2E8F0 !important;
+    }
+
+    /* 3. Titles, Headings, Subtitles, Captions */
+    .main-title {
+        font-size: 2.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.25rem;
+        color: #0F172A !important;
+    }
+
+    .sub-title {
+        font-size: 1.05rem;
+        color: #475569 !important;
+        margin-bottom: 1.5rem;
+        font-weight: 400;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+
+    p, .stMarkdown p, li {
+        color: #334155 !important;
+    }
+
+    [data-testid="stCaptionContainer"], caption, .stCaption {
+        color: #64748B !important;
+    }
+
+    hr {
+        border-color: #E2E8F0 !important;
+    }
+
+    .badge-phase {
+        display: inline-block;
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+
+    /* 4. PDF File Uploader */
+    [data-testid="stFileUploader"] {
+        background-color: #FFFFFF !important;
+        border: 1px dashed #CBD5E1 !important;
+        border-radius: 0.75rem !important;
+        padding: 0.5rem !important;
+    }
+
+    [data-testid="stFileUploader"] section {
+        background-color: #F8FAFC !important;
+        border-radius: 0.5rem !important;
+    }
+
+    [data-testid="stFileUploader"] * {
+        color: #0F172A !important;
+    }
+
+    [data-testid="stFileUploader"] button {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 0.375rem !important;
+    }
+
+    [data-testid="stFileUploader"] button:hover {
+        background-color: #F1F5F9 !important;
+        border-color: #94A3B8 !important;
+    }
+
+    [data-testid="stFileUploaderFile"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    /* 5. Inputs (Text, TextArea, NumberInput) & Labels */
+    .stTextInput input,
+    .stTextArea textarea,
+    .stNumberInput input {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 0.5rem !important;
+    }
+
+    .stTextInput input:focus,
+    .stTextArea textarea:focus,
+    .stNumberInput input:focus {
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+    }
+
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #94A3B8 !important;
+    }
+
+    textarea:disabled, input:disabled {
+        background-color: #F8FAFC !important;
+        color: #1E293B !important;
+        -webkit-text-fill-color: #1E293B !important;
+        opacity: 1 !important;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    .stTextInput label,
+    .stTextArea label,
+    .stNumberInput label,
+    .stSelectbox label,
+    .stMultiSelect label,
+    .stSlider label,
+    .stRadio label {
+        color: #0F172A !important;
+        font-weight: 600 !important;
+    }
+
+    /* 6. Selectbox & MultiSelect (BaseWeb) */
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border-color: #CBD5E1 !important;
+        border-radius: 0.5rem !important;
+    }
+
+    div[data-baseweb="select"] * {
+        color: #0F172A !important;
+    }
+
+    div[data-baseweb="select"] svg {
+        fill: #475569 !important;
+    }
+
+    div[data-baseweb="popover"],
+    div[data-baseweb="menu"],
+    ul[role="listbox"] {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    li[role="option"] {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+    }
+
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background-color: #EFF6FF !important;
+        color: #2563EB !important;
+    }
+
+    span[data-baseweb="tag"] {
+        background-color: #EFF6FF !important;
+        border: 1px solid #BFDBFE !important;
+        border-radius: 0.375rem !important;
+    }
+
+    span[data-baseweb="tag"] * {
+        color: #1D4ED8 !important;
+    }
+
+    /* 7. Sliders & Radio Controls */
+    [data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] {
+        background-color: #2563EB !important;
+        border: 2px solid #FFFFFF !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    [data-testid="stSlider"] * {
+        color: #0F172A !important;
+    }
+
+    [data-testid="stRadio"] div[role="radiogroup"] label {
+        color: #0F172A !important;
+    }
+
+    [data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
+        border-color: #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* 8. Buttons (Primary, Secondary, Download) */
+    button[kind="primary"],
+    [data-testid="stBaseButton-primary"],
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 0.5rem !important;
+        font-weight: 600 !important;
+        box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    button[kind="primary"]:hover,
+    [data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%) !important;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.35) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    button[kind="secondary"],
+    [data-testid="stBaseButton-secondary"],
+    .stButton > button:not([kind="primary"]),
+    [data-testid="stDownloadButton"] > button {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 0.5rem !important;
+        font-weight: 500 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    button[kind="secondary"]:hover,
+    [data-testid="stBaseButton-secondary"]:hover,
+    .stButton > button:not([kind="primary"]):hover,
+    [data-testid="stDownloadButton"] > button:hover {
+        background-color: #F1F5F9 !important;
+        border-color: #94A3B8 !important;
+        color: #0F172A !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* 9. Status & Overview Cards */
+    .status-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.45rem;
+        font-size: 0.92rem;
+        color: #0F172A !important;
+        font-weight: 500;
+    }
+
+    .status-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .status-check {
+        color: #10B981 !important;
+        font-size: 1.15rem;
+        margin-right: 0.6rem;
+        font-weight: bold;
+    }
+
+    .metric-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem;
+        padding: 0.95rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .metric-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748B !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.3rem;
+    }
+
+    .metric-val {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0F172A !important;
+    }
+
+    /* 10. QA Answer & No-Answer Cards */
+    .answer-card {
+        background: #F0FDF4 !important;
+        border: 1px solid #BBF7D0 !important;
+        border-left: 6px solid #16A34A !important;
+        border-radius: 0.75rem;
+        padding: 1.35rem 1.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.08);
+    }
+
+    .answer-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #15803D !important;
+        margin-bottom: 0.5rem;
+    }
+
+    .answer-text {
+        font-size: 1.18rem;
+        font-weight: 600;
+        color: #14532D !important;
+        line-height: 1.6;
+    }
+
+    .no-answer-card {
+        background: #FEF2F2 !important;
+        border: 1px solid #FECACA !important;
+        border-left: 6px solid #DC2626 !important;
+        border-radius: 0.75rem;
+        padding: 1.25rem 1.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .no-answer-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #B91C1C !important;
+        margin-bottom: 0.35rem;
+    }
+
+    .no-answer-msg {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #991B1B !important;
+        margin-bottom: 0.25rem;
+    }
+
+    /* 11. Source Attribution & Result Cards */
+    .source-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0.75rem;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem;
+        color: #334155 !important;
+    }
+
+    .result-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem;
+        padding: 1.15rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .result-card:hover {
+        border-color: #94A3B8 !important;
+        box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.07);
+    }
+
+    .result-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .rank-pill {
+        background: #0F172A !important;
+        color: #FFFFFF !important;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+    }
+
+    .similarity-pill {
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+    }
+
+    .similarity-high {
+        background: #DCFCE7 !important;
+        color: #15803D !important;
+        border: 1px solid #BBF7D0 !important;
+    }
+
+    .similarity-med {
+        background: #E0F2FE !important;
+        color: #0369A1 !important;
+        border: 1px solid #BAE6FD !important;
+    }
+
+    .similarity-low {
+        background: #F1F5F9 !important;
+        color: #475569 !important;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    .meta-tag {
+        background: #F8FAFC !important;
+        color: #334155 !important;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.375rem;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    .passage-box {
+        background: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 4px solid #2563EB !important;
+        border-radius: 0.5rem;
+        padding: 0.95rem 1.15rem;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        color: #1E293B !important;
+        margin-top: 0.5rem;
+        white-space: pre-wrap;
+    }
+
+    /* 12. Chunk Cards & Inspection */
+    .chunk-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .chunk-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .chunk-id-tag {
+        background: #EFF6FF !important;
+        color: #1D4ED8 !important;
+        font-family: 'Fira Code', monospace;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.375rem;
+        border: 1px solid #BFDBFE !important;
+    }
+
+    .chunk-meta-pill {
+        background: #F1F5F9 !important;
+        color: #475569 !important;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.375rem;
+    }
+
+    .preview-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem;
+        padding: 0.65rem;
+        height: 100%;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .preview-card-title {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #2563EB !important;
+    }
+
+    .preview-card-meta {
+        font-size: 0.72rem;
+        color: #64748B !important;
+        margin-top: 0.2rem;
+    }
+
+    .preview-card-text {
+        font-size: 0.75rem;
+        color: #334155 !important;
+        margin-top: 0.35rem;
+        line-height: 1.25;
+        max-height: 55px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .token-chip-container {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem;
+        padding: 0.6rem;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .token-chip {
+        background: #F1F5F9 !important;
+        color: #1E293B !important;
+        border: 1px solid #CBD5E1 !important;
+        display: inline-block;
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.25rem;
+        font-size: 0.78rem;
+        font-family: 'Fira Code', monospace;
+        margin: 0.15rem;
+    }
+
+    .token-chip.filtered {
+        background: #EFF6FF !important;
+        color: #2563EB !important;
+        border-color: #BFDBFE !important;
+    }
+
+    /* 13. Expanders, Tabs, Metrics, DataFrames, Alerts */
+    [data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    [data-testid="stExpander"] summary {
+        color: #0F172A !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stExpander"] summary:hover {
+        color: #2563EB !important;
+    }
+
+    [data-testid="stExpander"] summary svg {
+        fill: #475569 !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"] {
+        color: #64748B !important;
+        font-weight: 500 !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid transparent !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: #2563EB !important;
+        font-weight: 700 !important;
+        border-bottom: 2px solid #2563EB !important;
+    }
+
+    [data-testid="stMetric"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem !important;
+        padding: 0.75rem !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    [data-testid="stMetricLabel"] * {
+        color: #64748B !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stMetricValue"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+
+    [data-testid="stDataFrame"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem !important;
+    }
+
+    div[data-testid="stAlert"] {
+        border-radius: 0.5rem !important;
+    }
+"""
+
+
+def apply_theme(theme_mode: str) -> None:
+    """Inject active theme CSS into Streamlit application."""
+    if theme_mode == "Light":
+        st.markdown(f"<style>{LIGHT_THEME_CSS}</style>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<style>{DARK_THEME_CSS}</style>", unsafe_allow_html=True)
 
 
 def render_header() -> None:
@@ -400,6 +1128,18 @@ def render_header() -> None:
 def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
     """Render sidebar controls for configurable chunking, retrieval, and QA parameters."""
     with st.sidebar:
+        st.markdown("### 🎨 Theme")
+        selected_theme = st.radio(
+            "Interface Theme",
+            options=["Dark", "Light"],
+            index=0 if st.session_state.get("theme_mode_selector", st.session_state.get("app_theme", "Dark")) == "Dark" else 1,
+            horizontal=True,
+            help="Choose between Dark Theme (default) and Light Theme (clean research palette).",
+            key="theme_mode_selector",
+        )
+        st.session_state["app_theme"] = selected_theme
+        st.markdown("---")
+
         st.markdown("### ⚙️ Engine Configuration")
 
         st.markdown("#### 🧩 Phase 2: Chunking")
@@ -494,6 +1234,9 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
 
 def main() -> None:
     """Main application loop."""
+    active_theme = st.session_state.get("theme_mode_selector", st.session_state.get("app_theme", "Dark"))
+    apply_theme(active_theme)
+
     chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences = render_sidebar()
     render_header()
 
@@ -1130,10 +1873,10 @@ def main() -> None:
             with preview_cols[p_i]:
                 st.markdown(
                     f"""
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.65rem; height: 100%;">
-                        <div style="font-family: 'Fira Code', monospace; font-size: 0.78rem; font-weight: 600; color: #1d4ed8;">{p_i + 1}. {chk['chunk_id']}</div>
-                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">Page {chk['page']} &bull; {chk['char_count']} chars</div>
-                        <div style="font-size: 0.75rem; color: #334155; margin-top: 0.35rem; line-height: 1.25; max-height: 55px; overflow: hidden; text-overflow: ellipsis;">
+                    <div class="preview-card">
+                        <div class="preview-card-title">{p_i + 1}. {chk['chunk_id']}</div>
+                        <div class="preview-card-meta">Page {chk['page']} &bull; {chk['char_count']} chars</div>
+                        <div class="preview-card-text">
                             {chk['original_text'][:70]}...
                         </div>
                     </div>
