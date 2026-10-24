@@ -15,7 +15,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 
 from src.text_processor import ensure_nltk_resources
 
-# Default configuration parameters (configurable in one place)
+# Default configuration parameters check (configurable in one place)
 DEFAULT_CHUNK_SIZE: int = 500
 DEFAULT_CHUNK_OVERLAP: int = 50
 DEFAULT_MIN_CHUNK_SIZE: int = 20
