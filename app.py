@@ -488,13 +488,62 @@ LIGHT_THEME_CSS = """
         color: #0F172A !important;
     }
 
+    /* Radio Group Options */
     [data-testid="stRadio"] div[role="radiogroup"] label {
         color: #0F172A !important;
+        cursor: pointer !important;
+        align-items: center !important;
+        padding: 0.15rem 0 !important;
     }
 
-    [data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
-        border-color: #CBD5E1 !important;
+    /* Unselected outer circle container */
+    [data-testid="stRadio"] div[role="radiogroup"] label > div:first-of-type,
+    [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+        border: 2px solid #CBD5E1 !important;
         background-color: #FFFFFF !important;
+        border-radius: 50% !important;
+        transition: all 0.15s ease !important;
+    }
+
+    /* Hover effect on outer circle */
+    [data-testid="stRadio"] div[role="radiogroup"] label:hover > div:first-of-type,
+    [data-testid="stRadio"] div[role="radiogroup"] label:hover > div:first-child {
+        border-color: #2563EB !important;
+    }
+
+    /* Selected state: Outer circle border turns primary blue */
+    [data-testid="stRadio"] input:checked + div,
+    [data-testid="stRadio"] label[aria-checked="true"] > div:first-of-type,
+    [data-testid="stRadio"] label:has(input:checked) > div:first-of-type,
+    [data-testid="stRadio"] label[aria-checked="true"] > div:first-child,
+    [data-testid="stRadio"] label:has(input:checked) > div:first-child {
+        border-color: #2563EB !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* Selected state: Inner indicator dot filled with vibrant primary blue */
+    [data-testid="stRadio"] input:checked + div > div,
+    [data-testid="stRadio"] label[aria-checked="true"] > div:first-of-type > div,
+    [data-testid="stRadio"] label:has(input:checked) > div:first-of-type > div,
+    [data-testid="stRadio"] label[aria-checked="true"] > div:first-child > div,
+    [data-testid="stRadio"] label:has(input:checked) > div:first-child > div,
+    [data-testid="stRadio"] div[role="radiogroup"] [aria-checked="true"] div > div {
+        background-color: #2563EB !important;
+        background: #2563EB !important;
+        border-color: #2563EB !important;
+        border-radius: 50% !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+    }
+
+    /* Highlight label text for active/checked radio option */
+    [data-testid="stRadio"] label:has(input:checked) p,
+    [data-testid="stRadio"] label:has(input:checked) span,
+    [data-testid="stRadio"] label[aria-checked="true"] p,
+    [data-testid="stRadio"] label[aria-checked="true"] span {
+        color: #2563EB !important;
+        font-weight: 600 !important;
     }
 
     /* 9. Buttons (Primary & Secondary) */
