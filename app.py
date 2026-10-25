@@ -165,7 +165,7 @@ LIGHT_THEME_CSS = """
         font-weight: 700 !important;
     }
 
-    p, .stMarkdown p, li {
+    p, .stMarkdown:not(button *) p, li {
         color: #334155 !important;
     }
 
@@ -334,7 +334,9 @@ LIGHT_THEME_CSS = """
     /* 8. Buttons (Primary, Secondary, Download) */
     button[kind="primary"],
     [data-testid="stBaseButton-primary"],
-    .stButton > button[kind="primary"] {
+    .stButton > button[kind="primary"],
+    div.st-key-btn_ask_question button,
+    div.st-key-btn_run_retrieval_eval button {
         background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
@@ -344,11 +346,59 @@ LIGHT_THEME_CSS = """
         transition: all 0.15s ease !important;
     }
 
+    /* Force text & inner markdown/paragraphs in primary buttons to crisp white in all states */
+    button[kind="primary"] *,
+    button[kind="primary"] p,
+    button[kind="primary"] span,
+    button[kind="primary"] div,
+    [data-testid="stBaseButton-primary"] *,
+    [data-testid="stBaseButton-primary"] p,
+    [data-testid="stBaseButton-primary"] span,
+    [data-testid="stBaseButton-primary"] div,
+    .stButton > button[kind="primary"] *,
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    .stButton > button[kind="primary"] div,
+    .stButton > button[kind="primary"] [data-testid="stMarkdownContainer"] p,
+    [data-testid="stBaseButton-primary"] [data-testid="stMarkdownContainer"] p,
+    div.st-key-btn_ask_question button *,
+    div.st-key-btn_ask_question button p,
+    div.st-key-btn_run_retrieval_eval button *,
+    div.st-key-btn_run_retrieval_eval button p {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+
     button[kind="primary"]:hover,
-    [data-testid="stBaseButton-primary"]:hover {
+    button[kind="primary"]:active,
+    button[kind="primary"]:focus,
+    [data-testid="stBaseButton-primary"]:hover,
+    [data-testid="stBaseButton-primary"]:active,
+    [data-testid="stBaseButton-primary"]:focus,
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[kind="primary"]:active,
+    .stButton > button[kind="primary"]:focus,
+    div.st-key-btn_ask_question button:hover,
+    div.st-key-btn_run_retrieval_eval button:hover {
         background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%) !important;
         box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.35) !important;
         transform: translateY(-1px) !important;
+        color: #FFFFFF !important;
+    }
+
+    button[kind="primary"]:hover *,
+    button[kind="primary"]:active *,
+    button[kind="primary"]:focus *,
+    [data-testid="stBaseButton-primary"]:hover *,
+    [data-testid="stBaseButton-primary"]:active *,
+    [data-testid="stBaseButton-primary"]:focus *,
+    .stButton > button[kind="primary"]:hover *,
+    .stButton > button[kind="primary"]:active *,
+    .stButton > button[kind="primary"]:focus *,
+    div.st-key-btn_ask_question button:hover *,
+    div.st-key-btn_run_retrieval_eval button:hover * {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     button[kind="secondary"],
@@ -1065,7 +1115,12 @@ def main() -> None:
     with col_btn:
         st.write("")
         st.write("")
-        search_clicked = st.button("💬 Ask Question", type="primary", use_container_width=True)
+        search_clicked = st.button(
+            "💬 Ask Question",
+            type="primary",
+            use_container_width=True,
+            key="btn_ask_question",
+        )
 
     # Retrieval & QA Pipeline Execution
     if query_input:
