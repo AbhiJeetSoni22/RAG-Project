@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from typing import Any, Optional
+from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -56,6 +57,7 @@ class ExtractiveQAEngine:
             language: Corpus language for stop-word handling.
         """
         self.language = language
+        self.stemmer = PorterStemmer()
         ensure_nltk_resources()
 
     def score_sentence(
@@ -67,10 +69,11 @@ class ExtractiveQAEngine:
         """Compute a relevance score for an individual candidate sentence against a question.
 
         Combines:
-        1. Lexical content-word overlap ratio.
-        2. TF-IDF cosine similarity between question and sentence.
-        3. Informative cues (definition markers, quantity/numeric markers).
-        4. Prior retrieval similarity from the parent chunk.
+        1. Lexical content-word overlap ratio with morphological stemming.
+        2. Sentence-level TF-IDF cosine similarity between question and sentence.
+        3. Strict topical gating: candidate must share content keywords or stems.
+        4. Informative cues (definition markers, quantity/numeric markers) gated on topic match.
+        5. Prior retrieval similarity from the parent chunk.
 
         Args:
             sentence: Candidate sentence text.
@@ -88,9 +91,23 @@ class ExtractiveQAEngine:
         if not s_words:
             return 0.0
 
-        # 1. Lexical Overlap Ratio
-        overlap = len(q_words & s_words)
-        overlap_ratio = overlap / len(q_words)
+        # Stems for morphological flexibility (e.g. required vs requirement, attend vs attendance)
+        q_stems = {self.stemmer.stem(w) for w in q_words}
+        s_stems = {self.stemmer.stem(w) for w in s_words}
+
+        # 1. Lexical Overlap Ratio (exact and stemmed with prefix matching for percentages)
+        raw_overlap = len(q_words & s_words)
+        raw_overlap_ratio = raw_overlap / len(q_words)
+
+        stem_overlap_count = 0
+        for qs in q_stems:
+            if any(
+                qs == ss or (len(qs) >= 4 and len(ss) >= 4 and (qs.startswith(ss) or ss.startswith(qs)))
+                for ss in s_stems
+            ):
+                stem_overlap_count += 1
+        stem_overlap_ratio = stem_overlap_count / len(q_stems)
+        effective_overlap = max(raw_overlap_ratio, stem_overlap_ratio)
 
         # 2. Sentence-level TF-IDF Cosine Similarity
         try:
@@ -101,7 +118,17 @@ class ExtractiveQAEngine:
         except Exception:
             tfidf_sim = 0.0
 
-        # 3. Informative / Answer-type heuristics
+        # 3. Strict Topical Grounding Gate:
+        # A sentence without lexical/stem overlap or sentence-level TF-IDF similarity
+        # cannot be an answer to the question. Never grant quantity/definition bonuses
+        # to off-topic sentences containing arbitrary numbers or verbs.
+        has_topic_match = (stem_overlap_count > 0) or (raw_overlap > 0) or (tfidf_sim >= 0.08)
+
+        if not has_topic_match:
+            # Strictly bounded below min_sentence_score (0.15)
+            return float(min(0.08, 0.08 * max(0.0, chunk_similarity)))
+
+        # 4. Informative / Answer-type heuristics (Strictly GATED on topical relevance)
         bonus = 0.0
         q_lower = question.lower()
         s_lower = sentence.lower()
@@ -131,7 +158,7 @@ class ExtractiveQAEngine:
 
         # Weighted aggregate score
         total_score = (
-            (0.45 * overlap_ratio)
+            (0.45 * effective_overlap)
             + (0.30 * tfidf_sim)
             + (0.15 * max(0.0, chunk_similarity))
             + bonus
@@ -199,7 +226,7 @@ class ExtractiveQAEngine:
             return {
                 "answer": None,
                 "found": False,
-                "reason": "No sufficiently relevant information was found in the uploaded document.",
+                "reason": "I couldn't find a sufficiently relevant answer in this document. No sufficiently relevant information was found in the uploaded document.",
                 "source": None,
                 "page": None,
                 "chunk_id": None,
@@ -246,7 +273,7 @@ class ExtractiveQAEngine:
             return {
                 "answer": None,
                 "found": False,
-                "reason": "No sufficiently relevant passage was retrieved from the uploaded document.",
+                "reason": "I couldn't find a sufficiently relevant answer in this document. No sufficiently relevant passage was retrieved from the uploaded document.",
                 "source": None,
                 "page": None,
                 "chunk_id": None,
