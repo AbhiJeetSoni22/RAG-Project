@@ -1553,7 +1553,7 @@ def main() -> None:
                     f"""
                     <div class="no-answer-card">
                         <div class="no-answer-badge">⚠️ NO SUPPORTING EVIDENCE FOUND</div>
-                        <div class="no-answer-msg">No sufficiently relevant answer could be found in the uploaded document.</div>
+                        <div class="no-answer-msg">I couldn't find a sufficiently relevant answer in this document. Try rephrasing your question or check whether the document contains the information.</div>
                         <div class="no-answer-reason">
                             <b>Strict Grounding Reason:</b> {qa_result['reason']}
                         </div>
@@ -1616,6 +1616,12 @@ def main() -> None:
                             """,
                             unsafe_allow_html=True,
                         )
+
+            # Diagnostic Inspection (collapsible, keeps UI clean for normal users)
+            if "diagnostics" in qa_result and qa_result["diagnostics"]:
+                with st.expander("🛠️ Diagnostics & Grounding Signals (Developer)", expanded=False):
+                    st.caption("Internal telemetry, candidate features, and abstention reasons used for answer verification:")
+                    st.json(qa_result["diagnostics"])
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")

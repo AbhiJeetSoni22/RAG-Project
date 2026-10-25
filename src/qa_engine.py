@@ -8,6 +8,7 @@ page number, chunk ID, retrieval similarity, and original evidence passage).
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Optional
 from nltk.stem import PorterStemmer
@@ -17,6 +18,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from src.chunker import ensure_nltk_resources
+
+logger = logging.getLogger(__name__)
+
+FALLBACK_NO_ANSWER_MSG: str = (
+    "I couldn't find a sufficiently relevant answer in this document. "
+    "Try rephrasing your question or check whether the document contains the information."
+)
 
 
 class QAError(Exception):
@@ -47,6 +55,31 @@ def get_content_words(text: str, language: str = "english") -> set[str]:
     return {t for t in tokens if t not in stops and any(c.isalnum() for c in t)}
 
 
+def strip_leading_heading(text: str) -> str:
+    """Strip prepended section headings or chapter numbers from an extracted answer sentence.
+
+    Example:
+        '2.1 What Machine Learning Is Machine learning is...' -> 'Machine learning is...'
+
+    Args:
+        text: Extracted sentence text.
+
+    Returns:
+        Cleaned sentence text without leading heading noise.
+    """
+    if not text:
+        return ""
+    cleaned = text.strip()
+    # Match section number and title preceding the start of a standard capitalized sentence
+    match = re.match(
+        r"^(?:(?:Chapter|Section|\b)\s*\d+(\.\d+)*\s+[A-Za-z0-9\s:,\-]{2,50}?\s+)(?=[A-Z][a-z])",
+        cleaned,
+    )
+    if match:
+        cleaned = cleaned[match.end():].strip()
+    return cleaned
+
+
 class ExtractiveQAEngine:
     """Extractive Question Answering Engine grounded in retrieved document evidence."""
 
@@ -60,6 +93,13 @@ class ExtractiveQAEngine:
         self.stemmer = PorterStemmer()
         ensure_nltk_resources()
 
+    @staticmethod
+    def _normalize_stem(stem: str) -> str:
+        """Normalize specific English morphological quirks without loose substring matching."""
+        if stem in ("percentag", "percentage", "percent"):
+            return "percent"
+        return stem
+
     def score_sentence(
         self,
         sentence: str,
@@ -69,10 +109,11 @@ class ExtractiveQAEngine:
         """Compute a relevance score for an individual candidate sentence against a question.
 
         Combines:
-        1. Lexical content-word overlap ratio with morphological stemming.
-        2. Sentence-level TF-IDF cosine similarity between question and sentence.
-        3. Strict topical gating: candidate must share content keywords or stems.
-        4. Informative cues (definition markers, quantity/numeric markers) gated on topic match.
+        1. Lexical content-word overlap ratio with exact morphological stemming.
+        2. Sentence-level TF-IDF cosine similarity excluding generic stop-words.
+        3. Strict topical gating: candidate must share substantive keywords or stems.
+        4. Informative cues (definition markers, quantity/numeric markers) strictly gated
+           on topic match and target entity alignment.
         5. Prior retrieval similarity from the parent chunk.
 
         Args:
@@ -91,27 +132,22 @@ class ExtractiveQAEngine:
         if not s_words:
             return 0.0
 
-        # Stems for morphological flexibility (e.g. required vs requirement, attend vs attendance)
-        q_stems = {self.stemmer.stem(w) for w in q_words}
-        s_stems = {self.stemmer.stem(w) for w in s_words}
+        # Exact stems for morphological flexibility (e.g. required vs requirement, attend vs attendance)
+        q_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in q_words}
+        s_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in s_words}
 
-        # 1. Lexical Overlap Ratio (exact and stemmed with prefix matching for percentages)
+        # 1. Lexical Overlap Ratio (exact word match and exact stem match)
         raw_overlap = len(q_words & s_words)
         raw_overlap_ratio = raw_overlap / len(q_words)
 
-        stem_overlap_count = 0
-        for qs in q_stems:
-            if any(
-                qs == ss or (len(qs) >= 4 and len(ss) >= 4 and (qs.startswith(ss) or ss.startswith(qs)))
-                for ss in s_stems
-            ):
-                stem_overlap_count += 1
-        stem_overlap_ratio = stem_overlap_count / len(q_stems)
+        stem_overlap = len(q_stems & s_stems)
+        stem_overlap_ratio = stem_overlap / len(q_stems)
         effective_overlap = max(raw_overlap_ratio, stem_overlap_ratio)
 
-        # 2. Sentence-level TF-IDF Cosine Similarity
+        # 2. Sentence-level TF-IDF Cosine Similarity with stop words removed
+        # Generic words like 'what', 'is', 'the' must NEVER generate sentence similarity!
         try:
-            vec = TfidfVectorizer(ngram_range=(1, 2)).fit([sentence, question])
+            vec = TfidfVectorizer(ngram_range=(1, 2), stop_words="english").fit([sentence, question])
             q_vec = vec.transform([question])
             s_vec = vec.transform([sentence])
             tfidf_sim = float(cosine_similarity(q_vec, s_vec)[0][0])
@@ -119,13 +155,12 @@ class ExtractiveQAEngine:
             tfidf_sim = 0.0
 
         # 3. Strict Topical Grounding Gate:
-        # A sentence without lexical/stem overlap or sentence-level TF-IDF similarity
-        # cannot be an answer to the question. Never grant quantity/definition bonuses
-        # to off-topic sentences containing arbitrary numbers or verbs.
-        has_topic_match = (stem_overlap_count > 0) or (raw_overlap > 0) or (tfidf_sim >= 0.08)
+        # A candidate sentence MUST have at least one substantive matching content word or stem.
+        # Generic stop words (e.g. 'what', 'is', 'the') never satisfy this gate.
+        has_topic_match = (stem_overlap > 0) or (raw_overlap > 0)
 
         if not has_topic_match:
-            # Strictly bounded below min_sentence_score (0.15)
+            # Off-topic sentence: bounded strictly below min_sentence_score (0.15)
             return float(min(0.08, 0.08 * max(0.0, chunk_similarity)))
 
         # 4. Informative / Answer-type heuristics (Strictly GATED on topical relevance)
@@ -153,7 +188,9 @@ class ExtractiveQAEngine:
                 s_lower,
             )
         )
-        if has_def_q and has_def_s:
+        # Definition bonus applies ONLY if the sentence is defining one of the question's target stems
+        defines_target = has_def_s and bool(q_stems & s_stems)
+        if has_def_q and defines_target:
             bonus += 0.15
 
         # Weighted aggregate score
@@ -223,16 +260,26 @@ class ExtractiveQAEngine:
 
         # If retrieval returned no chunks (failed threshold or no match)
         if not retrieved_chunks:
+            logger.info("QA engine abstained: retrieved_chunks is empty for query '%s'", question)
             return {
                 "answer": None,
                 "found": False,
-                "reason": "I couldn't find a sufficiently relevant answer in this document. No sufficiently relevant information was found in the uploaded document.",
+                "reason": (
+                    f"{FALLBACK_NO_ANSWER_MSG} "
+                    "No sufficiently relevant information was found in the uploaded document."
+                ),
                 "source": None,
                 "page": None,
                 "chunk_id": None,
                 "similarity_score": 0.0,
                 "sentence_score": 0.0,
                 "evidence": None,
+                "diagnostics": {
+                    "question": question,
+                    "q_words": sorted(q_words),
+                    "retrieved_chunk_count": 0,
+                    "abstention_reason": "No chunks retrieved above similarity cutoff.",
+                },
             }
 
         # Consider top retrieved chunks (up to top 3 for passage analysis)
@@ -243,6 +290,8 @@ class ExtractiveQAEngine:
         best_chunk: Optional[dict[str, Any]] = None
         best_s_idx = -1
         best_sentences_list: list[str] = []
+
+        candidate_diagnostics: list[dict[str, Any]] = []
 
         for chunk in candidate_chunks:
             orig_text = chunk.get("original_text", "")
@@ -257,6 +306,14 @@ class ExtractiveQAEngine:
             for idx, sent in enumerate(sentences):
                 s_score = self.score_sentence(sent, question, chunk_sim)
 
+                candidate_diagnostics.append({
+                    "chunk_id": chunk.get("chunk_id"),
+                    "sentence_idx": idx,
+                    "sentence_preview": sent[:60] + ("..." if len(sent) > 60 else ""),
+                    "score": round(s_score, 4),
+                    "chunk_similarity": round(chunk_sim, 4),
+                })
+
                 # Prioritize sentence with higher score
                 if s_score > best_sentence_score:
                     best_sentence_score = s_score
@@ -264,28 +321,55 @@ class ExtractiveQAEngine:
                     best_s_idx = idx
                     best_sentences_list = sentences
 
+        diagnostics_payload = {
+            "question": question,
+            "q_words": sorted(q_words),
+            "retrieved_chunk_count": len(retrieved_chunks),
+            "candidate_chunk_ids": [c.get("chunk_id") for c in candidate_chunks],
+            "best_sentence_score": round(max(0.0, best_sentence_score), 4),
+            "min_sentence_score_threshold": min_sentence_score,
+            "evaluated_sentences_count": len(candidate_diagnostics),
+            "top_sentence_candidates": sorted(
+                candidate_diagnostics, key=lambda x: x["score"], reverse=True
+            )[:5],
+        }
+
         # Check if the best sentence meets the minimum confidence threshold
         if (
             best_chunk is None
             or best_sentence_score < min_sentence_score
             or best_s_idx < 0
         ):
+            logger.info(
+                "QA engine abstained: best_sentence_score (%.4f) < min_sentence_score (%.4f) for query '%s'",
+                best_sentence_score,
+                min_sentence_score,
+                question,
+            )
+            diagnostics_payload["abstention_reason"] = (
+                f"Best sentence score ({max(0.0, best_sentence_score):.4f}) was below acceptance threshold ({min_sentence_score:.4f})."
+            )
             return {
                 "answer": None,
                 "found": False,
-                "reason": "I couldn't find a sufficiently relevant answer in this document. No sufficiently relevant passage was retrieved from the uploaded document.",
+                "reason": (
+                    f"{FALLBACK_NO_ANSWER_MSG} "
+                    "No sufficiently relevant passage was retrieved from the uploaded document."
+                ),
                 "source": None,
                 "page": None,
                 "chunk_id": None,
                 "similarity_score": 0.0,
                 "sentence_score": 0.0,
                 "evidence": None,
+                "diagnostics": diagnostics_payload,
             }
 
         # Formulate answer span
         chosen_sentences = [best_sentences_list[best_s_idx]]
 
         # Multi-sentence expansion: check immediate neighbor if max_sentences > 1
+        q_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in q_words}
         if max_sentences > 1 and len(best_sentences_list) > 1:
             next_idx = best_s_idx + 1
             if next_idx < len(best_sentences_list):
@@ -293,19 +377,31 @@ class ExtractiveQAEngine:
                 next_score = self.score_sentence(
                     next_sent, question, float(best_chunk.get("similarity_score", 0.0))
                 )
-                # Include next sentence if it has strong relevance (at least 60% of top score)
-                if next_score >= max(min_sentence_score, 0.60 * best_sentence_score):
+                next_words = get_content_words(next_sent, self.language)
+                next_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in next_words}
+                # Include next sentence if it is topic-relevant to the question and sufficiently high scoring
+                if bool(q_stems & next_stems) and next_score >= max(min_sentence_score, 0.60 * best_sentence_score):
                     chosen_sentences.append(next_sent)
-            elif best_s_idx > 0:
+
+            # If next sentence was not included or capacity permits, check previous sentence
+            if len(chosen_sentences) < max_sentences and best_s_idx > 0:
                 prev_idx = best_s_idx - 1
                 prev_sent = best_sentences_list[prev_idx]
                 prev_score = self.score_sentence(
                     prev_sent, question, float(best_chunk.get("similarity_score", 0.0))
                 )
-                if prev_score >= max(min_sentence_score, 0.60 * best_sentence_score):
+                prev_words = get_content_words(prev_sent, self.language)
+                prev_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in prev_words}
+                if bool(q_stems & prev_stems) and prev_score >= max(min_sentence_score, 0.60 * best_sentence_score):
                     chosen_sentences.insert(0, prev_sent)
 
+        # Clean section heading prefix if prepended to the first answer sentence
+        chosen_sentences[0] = strip_leading_heading(chosen_sentences[0])
         answer_text = " ".join(s.strip() for s in chosen_sentences).strip()
+
+        diagnostics_payload["abstention_reason"] = None
+        diagnostics_payload["selected_chunk_id"] = best_chunk.get("chunk_id")
+        diagnostics_payload["selected_sentence_count"] = len(chosen_sentences)
 
         return {
             "answer": answer_text,
@@ -317,6 +413,7 @@ class ExtractiveQAEngine:
             "similarity_score": round(float(best_chunk.get("similarity_score", 0.0)), 4),
             "sentence_score": round(best_sentence_score, 4),
             "evidence": best_chunk.get("original_text"),
+            "diagnostics": diagnostics_payload,
         }
 
 
