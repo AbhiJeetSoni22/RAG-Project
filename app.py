@@ -1,9 +1,12 @@
-"""Streamlit application for Retrieval Based Question Answering (Phases 1, 2, 3 & 4).
+"""Streamlit Application for Retrieval-Based Question Answering.
 
-Phase 1: Document Ingestion & Text Preprocessing
-Phase 2: Text Chunking & Retrieval Data Preparation
-Phase 3: Retrieval Engine (TF-IDF + Cosine Similarity)
-Phase 4: Question Answering (Extractive, Retrieval-Grounded QA)
+Production-grade Document Intelligence and Grounded Question Answering System:
+- Document Ingestion & Text Preprocessing (PyMuPDF, text normalization, tokenization)
+- Semantic Text Chunking & Retrievable Passage Preparation
+- Dual Sparse & Dense Retrieval Engines (TF-IDF + all-MiniLM-L6-v2)
+- Reciprocal Score Fusion Hybrid Retrieval with configurable alpha
+- Strictly Grounded Extractive Question Answering
+- Information Retrieval Evaluation & Empirical Benchmark Suite
 """
 
 from __future__ import annotations
@@ -61,7 +64,6 @@ from src.evaluator import (
     EvaluationError,
 )
 
-
 # Set up logging for debugging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -87,26 +89,38 @@ def get_cached_chunk_embeddings(_model, chunk_texts: tuple[str, ...]):
         show_progress_bar=False,
     )
 
+
 # Configure Streamlit page
 st.set_page_config(
-    page_title="Retrieval Based Question Answering",
-    page_icon="🤖",
+    page_title="Document Intelligence | Grounded Question Answering",
+    page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Application Light Theme CSS
+# =============================================================================
+# APPLICATION DESIGN SYSTEM (Light-Only Professional Theme)
+# =============================================================================
 LIGHT_THEME_CSS = """
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
 
+    /* Global Reset & Typography */
     html, body, [class*="css"], .stApp {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
-    /* 1. Main Background and Content Area */
+    /* 1. Canvas & Viewport Background */
     .stApp, [data-testid="stAppViewContainer"], .main, .main .block-container {
         background-color: #F8FAFC !important;
         color: #0F172A !important;
+    }
+
+    .main .block-container {
+        padding-top: 1.75rem !important;
+        padding-bottom: 3.5rem !important;
+        max-width: 1240px !important;
     }
 
     [data-testid="stHeader"] {
@@ -119,7 +133,7 @@ LIGHT_THEME_CSS = """
         color: #0F172A !important;
     }
 
-    /* 2. Sidebar and Sidebar Controls */
+    /* 2. Sidebar Navigation & Controls */
     section[data-testid="stSidebar"], [data-testid="stSidebar"] > div {
         background-color: #FFFFFF !important;
         border-right: 1px solid #E2E8F0 !important;
@@ -137,65 +151,213 @@ LIGHT_THEME_CSS = """
 
     section[data-testid="stSidebar"] p,
     section[data-testid="stSidebar"] .stMarkdown p {
-        color: #334155 !important;
+        color: #475569 !important;
+        font-size: 0.88rem !important;
     }
 
     section[data-testid="stSidebar"] hr {
         border-color: #E2E8F0 !important;
+        margin: 1.25rem 0 !important;
     }
 
-    /* 3. Titles, Headings, Subtitles, Captions */
-    .main-title {
-        font-size: 2.25rem;
+    /* 3. Product Header & Branding */
+    .brand-container {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid #E2E8F0;
+    }
+
+    .brand-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #EFF6FF !important;
+        color: #2563EB !important;
+        border: 1px solid #BFDBFE !important;
+        font-size: 0.75rem;
         font-weight: 700;
-        letter-spacing: -0.02em;
-        margin-bottom: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.65rem;
+    }
+
+    .main-title {
+        font-size: 2.15rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
         color: #0F172A !important;
+        line-height: 1.2;
+        margin-bottom: 0.4rem;
     }
 
     .sub-title {
-        font-size: 1.05rem;
+        font-size: 1.02rem;
         color: #475569 !important;
-        margin-bottom: 1.5rem;
         font-weight: 400;
+        line-height: 1.55;
+        max-width: 900px;
     }
 
     h1, h2, h3, h4, h5, h6 {
         color: #0F172A !important;
         font-weight: 700 !important;
+        letter-spacing: -0.015em;
+    }
+
+    h2 {
+        font-size: 1.45rem !important;
+        margin-top: 1.75rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    h3 {
+        font-size: 1.15rem !important;
+        margin-top: 1.25rem !important;
+        margin-bottom: 0.35rem !important;
     }
 
     p, .stMarkdown:not(button *) p, li {
         color: #334155 !important;
+        line-height: 1.55;
     }
 
     [data-testid="stCaptionContainer"], caption, .stCaption {
         color: #64748B !important;
+        font-size: 0.88rem !important;
     }
 
     hr {
         border-color: #E2E8F0 !important;
+        margin: 1.75rem 0 !important;
     }
 
-    .badge-phase {
-        display: inline-block;
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: #FFFFFF !important;
-        font-size: 0.75rem;
+    /* 4. Active Document Banner */
+    .active-doc-banner {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 4px solid #2563EB !important;
+        border-radius: 0.75rem;
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .active-doc-title {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.95rem;
         font-weight: 600;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        color: #0F172A !important;
+    }
+
+    .active-doc-dot {
+        width: 9px;
+        height: 9px;
+        background-color: #16A34A;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+    }
+
+    /* 5. Empty State Onboarding Card */
+    .empty-hero-card {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 1rem;
+        padding: 2.25rem 2rem;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+
+    .empty-hero-icon {
+        font-size: 2.5rem;
         margin-bottom: 0.75rem;
     }
 
-    /* 4. PDF File Uploader */
+    .empty-hero-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0F172A !important;
+        margin-bottom: 0.4rem;
+    }
+
+    .empty-hero-sub {
+        font-size: 0.95rem;
+        color: #475569 !important;
+        max-width: 620px;
+        margin: 0 auto 1.75rem auto;
+        line-height: 1.5;
+    }
+
+    .workflow-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        text-align: left;
+        margin-top: 1.5rem;
+    }
+
+    .workflow-step {
+        background: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem;
+        padding: 1.15rem;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .workflow-step:hover {
+        border-color: #BFDBFE !important;
+        transform: translateY(-2px);
+    }
+
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: #2563EB;
+        color: #FFFFFF !important;
+        font-weight: 700;
+        font-size: 0.75rem;
+        border-radius: 50%;
+        margin-bottom: 0.6rem;
+    }
+
+    .step-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #0F172A !important;
+        margin-bottom: 0.25rem;
+    }
+
+    .step-desc {
+        font-size: 0.82rem;
+        color: #64748B !important;
+        line-height: 1.45;
+    }
+
+    /* 6. File Uploader */
     [data-testid="stFileUploader"] {
         background-color: #FFFFFF !important;
         border: 1px dashed #CBD5E1 !important;
         border-radius: 0.75rem !important;
-        padding: 0.5rem !important;
+        padding: 0.75rem !important;
+        transition: border-color 0.15s ease;
+    }
+
+    [data-testid="stFileUploader"]:hover {
+        border-color: #2563EB !important;
     }
 
     [data-testid="stFileUploader"] section {
@@ -212,6 +374,7 @@ LIGHT_THEME_CSS = """
         color: #0F172A !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 0.375rem !important;
+        font-weight: 500 !important;
     }
 
     [data-testid="stFileUploader"] button:hover {
@@ -222,9 +385,10 @@ LIGHT_THEME_CSS = """
     [data-testid="stFileUploaderFile"] {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem !important;
     }
 
-    /* 5. Inputs (Text, TextArea, NumberInput) & Labels */
+    /* 7. Input Controls, Selects, and Textareas */
     .stTextInput input,
     .stTextArea textarea,
     .stNumberInput input {
@@ -232,13 +396,15 @@ LIGHT_THEME_CSS = """
         color: #0F172A !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 0.5rem !important;
+        padding: 0.6rem 0.85rem !important;
+        font-size: 0.95rem !important;
     }
 
     .stTextInput input:focus,
     .stTextArea textarea:focus,
     .stNumberInput input:focus {
         border-color: #2563EB !important;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
     }
 
     .stTextInput input::placeholder,
@@ -263,9 +429,9 @@ LIGHT_THEME_CSS = """
     .stRadio label {
         color: #0F172A !important;
         font-weight: 600 !important;
+        font-size: 0.9rem !important;
     }
 
-    /* 6. Selectbox & MultiSelect (BaseWeb) */
     div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -311,7 +477,7 @@ LIGHT_THEME_CSS = """
         color: #1D4ED8 !important;
     }
 
-    /* 7. Sliders & Radio Controls */
+    /* 8. Sliders & Radio Options */
     [data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] {
         background-color: #2563EB !important;
         border: 2px solid #FFFFFF !important;
@@ -331,7 +497,7 @@ LIGHT_THEME_CSS = """
         background-color: #FFFFFF !important;
     }
 
-    /* 8. Buttons (Primary, Secondary, Download) */
+    /* 9. Buttons (Primary & Secondary) */
     button[kind="primary"],
     [data-testid="stBaseButton-primary"],
     .stButton > button[kind="primary"],
@@ -346,7 +512,6 @@ LIGHT_THEME_CSS = """
         transition: all 0.15s ease !important;
     }
 
-    /* Force text & inner markdown/paragraphs in primary buttons to crisp white in all states */
     button[kind="primary"] *,
     button[kind="primary"] p,
     button[kind="primary"] span,
@@ -424,48 +589,19 @@ LIGHT_THEME_CSS = """
         transform: translateY(-1px) !important;
     }
 
-    /* 9. Status & Overview Cards */
-    .status-card {
-        background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
-
-    .status-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.45rem;
-        font-size: 0.92rem;
-        color: #0F172A !important;
-        font-weight: 500;
-    }
-
-    .status-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .status-check {
-        color: #10B981 !important;
-        font-size: 1.15rem;
-        margin-right: 0.6rem;
-        font-weight: bold;
-    }
-
+    /* 10. Document Overview & KPI Cards */
     .metric-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 0.85rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
     }
 
     .metric-card {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 0.75rem;
-        padding: 0.95rem;
+        padding: 0.95rem 1.1rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
@@ -481,89 +617,154 @@ LIGHT_THEME_CSS = """
         color: #64748B !important;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.35rem;
     }
 
     .metric-val {
-        font-size: 1.4rem;
-        font-weight: 700;
+        font-size: 1.45rem;
+        font-weight: 800;
         color: #0F172A !important;
+        line-height: 1.2;
     }
 
-    /* 10. QA Answer & No-Answer Cards */
+    /* 11. Pipeline Readiness Chips */
+    .pipeline-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .pipeline-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 9999px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #0F172A !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    .pipeline-check {
+        color: #16A34A !important;
+        font-weight: bold;
+    }
+
+    /* 12. Answer & Evidence Presentation */
     .answer-card {
         background: #F0FDF4 !important;
         border: 1px solid #BBF7D0 !important;
         border-left: 6px solid #16A34A !important;
-        border-radius: 0.75rem;
-        padding: 1.35rem 1.5rem;
-        margin-top: 0.75rem;
+        border-radius: 0.85rem;
+        padding: 1.4rem 1.6rem;
+        margin-top: 0.85rem;
         margin-bottom: 1rem;
-        box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.08);
+        box-shadow: 0 2px 5px rgba(22, 163, 74, 0.08);
     }
 
-    .answer-title {
-        font-size: 0.82rem;
+    .answer-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         color: #15803D !important;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.65rem;
     }
 
     .answer-text {
-        font-size: 1.18rem;
+        font-size: 1.2rem;
         font-weight: 600;
         color: #14532D !important;
-        line-height: 1.6;
+        line-height: 1.65;
     }
 
     .no-answer-card {
         background: #FEF2F2 !important;
         border: 1px solid #FECACA !important;
         border-left: 6px solid #DC2626 !important;
-        border-radius: 0.75rem;
-        padding: 1.25rem 1.5rem;
-        margin-top: 0.75rem;
+        border-radius: 0.85rem;
+        padding: 1.35rem 1.6rem;
+        margin-top: 0.85rem;
         margin-bottom: 1rem;
     }
 
-    .no-answer-title {
-        font-size: 0.85rem;
+    .no-answer-badge {
+        font-size: 0.8rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         color: #B91C1C !important;
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.4rem;
     }
 
     .no-answer-msg {
         font-size: 1.05rem;
         font-weight: 600;
         color: #991B1B !important;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.4rem;
     }
 
-    /* 11. Source Attribution & Result Cards */
+    .no-answer-reason {
+        font-size: 0.88rem;
+        color: #7F1D1D !important;
+        background: rgba(220, 38, 38, 0.06);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        margin-top: 0.5rem;
+    }
+
     .source-container {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
         margin-bottom: 1rem;
-        padding: 0.5rem 0.75rem;
+        padding: 0.6rem 0.85rem;
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 0.5rem;
         color: #334155 !important;
     }
 
+    .meta-tag {
+        background: #F8FAFC !important;
+        color: #334155 !important;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.25rem 0.6rem;
+        border-radius: 0.375rem;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    .evidence-quote-box {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 4px solid #2563EB !important;
+        border-radius: 0.65rem;
+        padding: 1.1rem 1.35rem;
+        font-size: 0.98rem;
+        line-height: 1.65;
+        color: #1E293B !important;
+        font-style: italic;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        white-space: pre-wrap;
+    }
+
+    /* 13. Top Retrieved Passages Cards */
     .result-card {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 0.75rem;
         padding: 1.15rem;
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.1rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         transition: box-shadow 0.15s ease, border-color 0.15s ease;
     }
@@ -577,23 +778,23 @@ LIGHT_THEME_CSS = """
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.6rem;
-        margin-bottom: 0.85rem;
+        gap: 0.55rem;
+        margin-bottom: 0.75rem;
     }
 
     .rank-pill {
         background: #0F172A !important;
         color: #FFFFFF !important;
         font-weight: 700;
-        font-size: 0.82rem;
-        padding: 0.25rem 0.65rem;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.65rem;
         border-radius: 9999px;
     }
 
     .similarity-pill {
         font-weight: 700;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.65rem;
+        font-size: 0.82rem;
+        padding: 0.2rem 0.65rem;
         border-radius: 9999px;
     }
 
@@ -615,37 +816,172 @@ LIGHT_THEME_CSS = """
         border: 1px solid #E2E8F0 !important;
     }
 
-    .meta-tag {
-        background: #F8FAFC !important;
-        color: #334155 !important;
-        font-size: 0.8rem;
-        font-weight: 500;
-        padding: 0.2rem 0.55rem;
-        border-radius: 0.375rem;
-        border: 1px solid #E2E8F0 !important;
-    }
-
     .passage-box {
         background: #F8FAFC !important;
         border: 1px solid #E2E8F0 !important;
-        border-left: 4px solid #2563EB !important;
         border-radius: 0.5rem;
         padding: 0.95rem 1.15rem;
-        font-size: 0.95rem;
+        font-size: 0.93rem;
         line-height: 1.55;
         color: #1E293B !important;
         margin-top: 0.5rem;
         white-space: pre-wrap;
     }
 
-    /* 12. Chunk Cards & Inspection */
+    /* 14. Expanders */
+    [data-testid="stExpander"],
+    details[data-testid="stExpander"],
+    .streamlit-expander,
+    div[data-baseweb="accordion"] {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 0.75rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        overflow: hidden !important;
+        margin-bottom: 1rem !important;
+    }
+
+    [data-testid="stExpander"] details,
+    details[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        border-radius: 0.75rem !important;
+        border: none !important;
+    }
+
+    [data-testid="stExpander"] summary,
+    details[data-testid="stExpander"] summary,
+    .streamlit-expanderHeader {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        color: #0F172A !important;
+        font-weight: 600 !important;
+        border-radius: 0.75rem !important;
+        padding: 0.8rem 1.15rem !important;
+        border: none !important;
+        transition: background-color 0.15s ease, color 0.15s ease !important;
+    }
+
+    [data-testid="stExpander"] summary *,
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span,
+    [data-testid="stExpander"] summary div,
+    details[data-testid="stExpander"] summary *,
+    details[data-testid="stExpander"] summary p,
+    details[data-testid="stExpander"] summary span,
+    details[data-testid="stExpander"] summary div,
+    .streamlit-expanderHeader * {
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stExpander"] summary:hover,
+    details[data-testid="stExpander"] summary:hover,
+    .streamlit-expanderHeader:hover {
+        background-color: #F8FAFC !important;
+        background: #F8FAFC !important;
+        color: #2563EB !important;
+    }
+
+    [data-testid="stExpander"] summary:hover *,
+    [data-testid="stExpander"] summary:hover p,
+    [data-testid="stExpander"] summary:hover span,
+    details[data-testid="stExpander"] summary:hover *,
+    details[data-testid="stExpander"] summary:hover p,
+    details[data-testid="stExpander"] summary:hover span {
+        color: #2563EB !important;
+        -webkit-text-fill-color: #2563EB !important;
+    }
+
+    [data-testid="stExpander"] summary svg,
+    details[data-testid="stExpander"] summary svg {
+        fill: #475569 !important;
+        color: #475569 !important;
+    }
+
+    [data-testid="stExpander"] summary:hover svg,
+    details[data-testid="stExpander"] summary:hover svg {
+        fill: #2563EB !important;
+        color: #2563EB !important;
+    }
+
+    [data-testid="stExpanderDetails"],
+    .streamlit-expanderContent {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        color: #0F172A !important;
+        padding: 1.25rem !important;
+        border-top: 1px solid #F1F5F9 !important;
+    }
+
+    /* 15. Tabs */
+    [data-testid="stTabs"] {
+        background-color: transparent !important;
+    }
+
+    [data-testid="stTabs"] div[role="tablist"] {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+        padding: 0 0.5rem !important;
+        gap: 0.5rem !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"] {
+        color: #475569 !important;
+        font-weight: 600 !important;
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        padding: 0.65rem 1rem !important;
+        transition: all 0.15s ease !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"] * {
+        color: #475569 !important;
+        -webkit-text-fill-color: #475569 !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"]:hover {
+        color: #2563EB !important;
+        background-color: #F8FAFC !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"]:hover * {
+        color: #2563EB !important;
+        -webkit-text-fill-color: #2563EB !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: #2563EB !important;
+        font-weight: 700 !important;
+        background-color: transparent !important;
+        border-bottom: 2px solid #2563EB !important;
+    }
+
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+        color: #2563EB !important;
+        -webkit-text-fill-color: #2563EB !important;
+        font-weight: 700 !important;
+    }
+
+    [data-testid="stTabs"] div[role="tabpanel"] {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        padding-top: 1rem !important;
+    }
+
+    /* 16. Chunks & Chips */
     .chunk-card {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 0.75rem;
-        padding: 1rem 1.25rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        padding: 0.85rem 1.15rem;
+        margin-bottom: 0.75rem;
     }
 
     .chunk-header {
@@ -653,7 +989,6 @@ LIGHT_THEME_CSS = """
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
-        margin-bottom: 0.75rem;
     }
 
     .chunk-id-tag {
@@ -661,7 +996,7 @@ LIGHT_THEME_CSS = """
         color: #1D4ED8 !important;
         font-family: 'Fira Code', monospace;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         padding: 0.2rem 0.55rem;
         border-radius: 0.375rem;
         border: 1px solid #BFDBFE !important;
@@ -670,9 +1005,9 @@ LIGHT_THEME_CSS = """
     .chunk-meta-pill {
         background: #F1F5F9 !important;
         color: #475569 !important;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 500;
-        padding: 0.2rem 0.55rem;
+        padding: 0.2rem 0.5rem;
         border-radius: 0.375rem;
     }
 
@@ -735,66 +1070,16 @@ LIGHT_THEME_CSS = """
         border-color: #BFDBFE !important;
     }
 
-    /* 13. Expanders, Tabs, Metrics, DataFrames, Alerts */
-    [data-testid="stExpander"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 0.75rem !important;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    /* 17. Button Alignment Helper */
+    .btn-align-wrapper {
+        height: 28px;
     }
 
-    [data-testid="stExpander"] summary {
-        color: #0F172A !important;
-        font-weight: 600 !important;
-    }
-
-    [data-testid="stExpander"] summary:hover {
-        color: #2563EB !important;
-    }
-
-    [data-testid="stExpander"] summary svg {
-        fill: #475569 !important;
-    }
-
-    [data-testid="stTabs"] button[role="tab"] {
-        color: #64748B !important;
-        font-weight: 500 !important;
-        background-color: transparent !important;
-        border-bottom: 2px solid transparent !important;
-    }
-
-    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-        color: #2563EB !important;
-        font-weight: 700 !important;
-        border-bottom: 2px solid #2563EB !important;
-    }
-
-    [data-testid="stMetric"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 0.5rem !important;
-        padding: 0.75rem !important;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
-    }
-
-    [data-testid="stMetricLabel"] * {
-        color: #64748B !important;
-        font-weight: 600 !important;
-    }
-
-    [data-testid="stMetricValue"] * {
-        color: #0F172A !important;
-        font-weight: 700 !important;
-    }
-
-    [data-testid="stDataFrame"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 0.5rem !important;
-    }
-
-    div[data-testid="stAlert"] {
-        border-radius: 0.5rem !important;
+    @media (max-width: 768px) {
+        .btn-align-wrapper {
+            height: 0px;
+            display: none;
+        }
     }
 """
 
@@ -803,14 +1088,59 @@ st.markdown(f"<style>{LIGHT_THEME_CSS}</style>", unsafe_allow_html=True)
 
 
 def render_header() -> None:
-    """Render page title, badge, and subtitle."""
-    st.markdown('<span class="badge-phase">Phase 7 &bull; Hybrid Retrieval (ACTIVE)</span>', unsafe_allow_html=True)
-    st.markdown('<div class="main-title">Retrieval Based Question Answering</div>', unsafe_allow_html=True)
+    """Render page title, badge, and concise subtitle."""
     st.markdown(
-        '<div class="sub-title">Upload a PDF, retrieve passages via Hybrid Retrieval (TF-IDF + Semantic Embeddings), extract grounded answers, and objectively benchmark retrieval performance across standard IR metrics.</div>',
+        """
+        <div class="brand-container">
+            <span class="brand-badge">⚡ Enterprise Document Intelligence &bull; Extractive QA Engine</span>
+            <div class="main-title">Document Intelligence</div>
+            <div class="sub-title">
+                Upload any PDF document to ask natural language questions with strict document-grounded extractive answering
+                and objectively benchmark retrieval performance across lexical (TF-IDF), dense semantic (MiniLM), and hybrid retrieval engines.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
+
+def render_empty_state() -> None:
+    """Render an inviting, professional onboarding interface when no document is uploaded."""
+    st.markdown(
+        """
+        <div class="empty-hero-card">
+            <div class="empty-hero-icon">📄</div>
+            <div class="empty-hero-title">Ready for Document Question Answering</div>
+            <div class="empty-hero-sub">
+                Upload a PDF document above to extract text, build dual sparse-dense retrieval indices,
+                and ask natural language questions with 100% grounded citations.
+            </div>
+            <div class="workflow-grid">
+                <div class="workflow-step">
+                    <span class="step-number">1</span>
+                    <div class="step-title">Upload Document</div>
+                    <div class="step-desc">Extract text via PyMuPDF, normalize whitespace, tokenize words, and generate overlapping semantic chunks.</div>
+                </div>
+                <div class="workflow-step">
+                    <span class="step-number">2</span>
+                    <div class="step-title">Choose Retrieval Engine</div>
+                    <div class="step-desc">Select TF-IDF (keyword lexical), SentenceTransformers (dense contextual vector), or Hybrid reciprocal score fusion.</div>
+                </div>
+                <div class="workflow-step">
+                    <span class="step-number">3</span>
+                    <div class="step-title">Grounded Answer & Citation</div>
+                    <div class="step-desc">Ask questions to extract precise answer spans directly from source passages with zero generative hallucination.</div>
+                </div>
+                <div class="workflow-step">
+                    <span class="step-number">4</span>
+                    <div class="step-title">Empirical Benchmarks</div>
+                    <div class="step-desc">Objectively measure Hit@K, MRR, Precision@K, and Recall@K against a verified ground-truth QA dataset.</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
@@ -818,7 +1148,7 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
     with st.sidebar:
         st.markdown("### ⚙️ Engine Configuration")
 
-        st.markdown("#### 🧩 Phase 2: Chunking")
+        st.markdown("#### 📄 Document Chunking")
         chunk_size = st.slider(
             "Chunk Size (characters)",
             min_value=100,
@@ -840,26 +1170,27 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
         )
 
         st.markdown("---")
-        st.markdown("#### 🔍 Phase 3, 5 & 7: Retrieval")
+        st.markdown("#### 🔎 Retrieval Engine")
         retrieval_method = st.radio(
-            "Retrieval Method",
+            "Default Retrieval Method",
             options=["Hybrid", "Semantic Embeddings", "TF-IDF"],
             index=0,
-            help="Select retrieval engine: Hybrid (TF-IDF + Semantic Embeddings), Semantic Embeddings (Sentence Transformers all-MiniLM-L6-v2), or Lexical TF-IDF.",
+            help="Select default retrieval strategy: Hybrid (fused lexical + dense semantic), Semantic (SentenceTransformers all-MiniLM-L6-v2), or Lexical TF-IDF.",
             key="cfg_retrieval_method",
         )
 
         hybrid_alpha = 0.50
         if retrieval_method == "Hybrid":
             hybrid_alpha = st.slider(
-                "Hybrid Lexical Weight (α)",
+                "Hybrid Weight (α: Lexical vs 1-α: Semantic)",
                 min_value=0.0,
                 max_value=1.0,
                 value=0.50,
                 step=0.05,
-                help="Weight α for lexical TF-IDF score vs (1 - α) for Semantic embedding score (0.0 = purely Semantic, 1.0 = purely TF-IDF).",
+                help="Weight α for lexical TF-IDF score vs (1 - α) for Semantic dense embedding score. α=1.0 is purely lexical; α=0.0 is purely semantic.",
                 key="cfg_hybrid_alpha",
             )
+            st.caption(f"**Current Fusion:** {hybrid_alpha * 100:.0f}% TF-IDF Lexical + {(1 - hybrid_alpha) * 100:.0f}% Semantic Embeddings")
 
         top_k = st.slider(
             "Top-K Retrieved Passages",
@@ -867,7 +1198,7 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
             max_value=10,
             value=5,
             step=1,
-            help="Maximum number of relevant passages to retrieve for answer extraction.",
+            help="Maximum number of relevant candidate passages retrieved for answer extraction.",
             key="cfg_top_k",
         )
 
@@ -877,12 +1208,12 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
             max_value=1.0,
             value=0.10,
             step=0.05,
-            help="Chunks with cosine similarity below this threshold will be excluded as non-relevant.",
+            help="Passages with cosine similarity below this cutoff will be excluded as non-relevant.",
             key="cfg_min_similarity",
         )
 
         st.markdown("---")
-        st.markdown("#### 💡 Phase 4: Answer Extraction")
+        st.markdown("#### 🎯 Answer Extraction")
         max_sentences = st.slider(
             "Max Answer Sentences",
             min_value=1,
@@ -894,14 +1225,13 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
         )
 
         st.markdown("---")
-        st.markdown("#### ℹ️ Grounding Principle")
+        st.markdown("#### 🛡️ Grounding Principles")
         st.markdown(
             """
-            * **Strategy:** Extractive / Retrieval-grounded
-            * **Principle:** Retrieve first $\\rightarrow$ Answer only from evidence
-            * **Retriever:** Hybrid, Semantic Embeddings, or TF-IDF
-            * **Safety:** Never answers if no evidence exists in the document
-            * **No LLM / Hallucinations:** 100% deterministic NLP extraction
+            * **Extractive NLP:** Answers are extracted verbatim from retrieved passages.
+            * **Zero Hallucination:** Deterministic sentence scoring prevents generative fabrication.
+            * **Evidence First:** The system refuses to answer if no supporting evidence exists.
+            * **Auditable Citations:** Every response links to its exact page number and chunk ID.
             """
         )
 
@@ -913,8 +1243,9 @@ def main() -> None:
     chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences = render_sidebar()
     render_header()
 
-    # Upload Section
-    st.markdown("### 📤 Upload Document")
+    # Document Upload Section
+    st.markdown("### 📤 Document Ingestion")
+    st.caption("Upload any standard PDF document (academic paper, report, manual, policy) to build retrieval indices and begin querying.")
     uploaded_file = st.file_uploader(
         "Choose a PDF file",
         type=["pdf"],
@@ -922,7 +1253,7 @@ def main() -> None:
     )
 
     if uploaded_file is None:
-        st.info("👋 Please upload a PDF document above to start document ingestion and question answering.")
+        render_empty_state()
         return
 
     # Check for empty file upload (0 bytes)
@@ -931,9 +1262,9 @@ def main() -> None:
         st.error("⚠️ The uploaded file is empty (0 bytes). Please upload a valid PDF document.")
         return
 
-    # Phase 1: Ingestion & Text Processing
+    # Step 1: Ingestion & Text Processing
     try:
-        with st.spinner("Step 1: Extracting and preprocessing text page-by-page..."):
+        with st.spinner("Parsing PDF and preprocessing text page-by-page..."):
             raw_pages = extract_text_from_pdf(io.BytesIO(file_bytes))
             num_pages = len(raw_pages)
 
@@ -957,7 +1288,7 @@ def main() -> None:
         st.error(f"❌ An unexpected error occurred while processing the PDF: {exc}")
         return
 
-    # Check if any text was extracted
+    # Check if any extractable text was found
     if doc_stats["pages_with_text"] == 0:
         st.warning(
             "⚠️ No extractable text was found in this document. "
@@ -965,9 +1296,9 @@ def main() -> None:
         )
         return
 
-    # Phase 2: Document Chunking
+    # Step 2: Document Chunking
     try:
-        with st.spinner("Step 2: Partitioning text into semantic chunks with overlap..."):
+        with st.spinner("Partitioning text into retrievable passages with context overlap..."):
             chunks = chunk_document(
                 processed_pages=processed_pages,
                 source=uploaded_file.name,
@@ -989,9 +1320,9 @@ def main() -> None:
         st.error(f"❌ An unexpected error occurred during chunking: {exc}")
         return
 
-    # Phase 3, 5 & 7: Index Document Chunks for TF-IDF, Semantic, and Hybrid Retrieval
+    # Step 3: Index Document Chunks for TF-IDF, Semantic, and Hybrid Retrieval
     try:
-        with st.spinner("Step 3: Indexing document chunks for TF-IDF, Semantic, and Hybrid retrieval..."):
+        with st.spinner("Building lexical TF-IDF index and computing dense neural embeddings..."):
             tfidf_retriever = TFIDFRetriever(chunks)
 
             # Initialize Semantic Retriever with cached SentenceTransformer and cached embeddings
@@ -1022,51 +1353,40 @@ def main() -> None:
         st.error(f"❌ Failed to build retrieval engines: {exc}")
         return
 
-    # Phase 4: Initialize QA Engine
+    # Initialize Extractive QA Engine
     qa_engine = ExtractiveQAEngine()
 
-    st.markdown("---")
-
-    # Layout: Status Checklist & Document Information
-    col_status, col_info = st.columns([1, 2])
-
-    with col_status:
-        st.markdown("### 📋 Processing Status")
-        st.markdown(
-            f"""
-            <div class="status-card">
-                <div class="status-item"><span class="status-check">✓</span> PDF uploaded ({uploaded_file.name})</div>
-                <div class="status-item"><span class="status-check">✓</span> Text extracted ({doc_stats['total_pages']} pages)</div>
-                <div class="status-item"><span class="status-check">✓</span> Text cleaned & normalized</div>
-                <div class="status-item"><span class="status-check">✓</span> Tokenization completed</div>
-                <div class="status-item"><span class="status-check">✓</span> Stop-word removal completed</div>
-                <div class="status-item"><span class="status-check">✓</span> Text chunking completed ({len(chunks)} chunks)</div>
-                <div class="status-item"><span class="status-check">✓</span> TF-IDF vectorizer indexed ({len(chunks)} passages)</div>
-                <div class="status-item"><span class="status-check">✓</span> Semantic embeddings indexed ({len(chunks)} passages &bull; all-MiniLM-L6-v2)</div>
-                <div class="status-item"><span class="status-check">✓</span> Hybrid retriever indexed ({len(chunks)} passages &bull; α={hybrid_alpha:.2f})</div>
-                <div class="status-item"><span class="status-check">✓</span> <b>Extractive QA Engine ready</b></div>
-                <div class="status-item"><span class="status-check">✓</span> <b>Retrieval Evaluation Framework ready</b></div>
+    # Active Document Banner
+    st.markdown(
+        f"""
+        <div class="active-doc-banner">
+            <div class="active-doc-title">
+                <span class="active-doc-dot"></span>
+                <span><b>Active Document:</b> {uploaded_file.name}</span>
             </div>
+            <div>
+                <span class="meta-tag"><b>Format:</b> PDF ({len(file_bytes) / 1024:.1f} KB)</span>
+                <span class="meta-tag"><b>Pages:</b> {doc_stats['total_pages']}</span>
+                <span class="meta-tag"><b>Status:</b> Indexed & Ready</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with col_info:
+    # Document Overview & Pipeline Readiness
+    col_kpi, col_pipe = st.columns([3, 2])
+    with col_kpi:
         st.markdown("### 📊 Document Overview")
         st.markdown(
             f"""
             <div class="metric-container">
                 <div class="metric-card">
-                    <div class="metric-label">File Name</div>
-                    <div class="metric-val" style="font-size: 1.05rem; word-break: break-all;">{uploaded_file.name}</div>
-                </div>
-                <div class="metric-card">
                     <div class="metric-label">Total Pages</div>
                     <div class="metric-val">{doc_stats["total_pages"]}</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">Pages with Text</div>
+                    <div class="metric-label">Pages With Text</div>
                     <div class="metric-val">{doc_stats["pages_with_text"]}</div>
                 </div>
                 <div class="metric-card">
@@ -1079,8 +1399,30 @@ def main() -> None:
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Indexed Chunks</div>
-                    <div class="metric-val" style="color: #4f46e5;">{chunk_stats["total_chunks"]}</div>
+                    <div class="metric-val" style="color: #2563EB;">{chunk_stats["total_chunks"]}</div>
                 </div>
+                <div class="metric-card">
+                    <div class="metric-label">Avg Chunk Length</div>
+                    <div class="metric-val">{chunk_stats["avg_chunk_size"]} <span style="font-size: 0.8rem; font-weight: 500; color: #64748B;">chars</span></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col_pipe:
+        st.markdown("### ⚡ Pipeline Readiness")
+        st.markdown(
+            f"""
+            <div class="pipeline-container">
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> PDF Ingestion & Normalization</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> Tokenization & Stop-words Removed</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> Chunk Partitioning ({len(chunks)} Chunks)</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> TF-IDF Lexical Vectorizer Indexed</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> Dense Embeddings Indexed (all-MiniLM-L6-v2)</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> Hybrid Fusion Engine Active (α={hybrid_alpha:.2f})</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> Extractive Grounded QA Engine Ready</div>
+                <div class="pipeline-chip"><span class="pipeline-check">✓</span> IR Evaluation Framework Configured</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1089,10 +1431,10 @@ def main() -> None:
     st.markdown("---")
 
     # =========================================================================
-    # PHASE 4: QUESTION ANSWERING SECTION
+    # QUESTION ANSWERING SECTION
     # =========================================================================
-    st.markdown("## 🤖 Question Answering")
-    st.caption("Ask questions about the uploaded document. The system retrieves relevant passages and extracts factual answers strictly grounded in the document evidence.")
+    st.markdown("## 💬 Document Question Answering")
+    st.caption("Ask questions about the uploaded document. The system retrieves relevant passages and extracts factual answers strictly grounded in document evidence.")
 
     col_method, col_query, col_btn = st.columns([2, 4, 1])
 
@@ -1113,8 +1455,7 @@ def main() -> None:
         )
 
     with col_btn:
-        st.write("")
-        st.write("")
+        st.markdown('<div class="btn-align-wrapper"></div>', unsafe_allow_html=True)
         search_clicked = st.button(
             "💬 Ask Question",
             type="primary",
@@ -1122,15 +1463,22 @@ def main() -> None:
             key="btn_ask_question",
         )
 
+    if selected_method == "Hybrid":
+        st.caption(f"⚡ **Hybrid Mode Active:** Balancing lexical TF-IDF (α={hybrid_alpha:.2f}) and semantic embeddings (1-α={1.0 - hybrid_alpha:.2f}). Adjust α in the sidebar.")
+    elif selected_method == "Semantic Embeddings":
+        st.caption("🧠 **Dense Semantic Mode Active:** Using SentenceTransformers (`all-MiniLM-L6-v2`) 384-dimensional contextual embeddings.")
+    else:
+        st.caption("🔤 **Lexical TF-IDF Mode Active:** Using sparse n-gram vector matching with sublinear term frequency scaling.")
+
     # Retrieval & QA Pipeline Execution
     if query_input:
         cleaned_q = query_input.strip()
 
-        # Requirement 16: Handle empty / whitespace / punctuation-only question
+        # Handle empty / whitespace / punctuation-only question
         if not cleaned_q or not any(c.isalnum() for c in cleaned_q):
             st.warning("⚠️ Please enter a question containing valid words or alphanumeric keywords.")
         else:
-            with st.spinner(f"Retrieving passages via {selected_method} and extracting grounded answer..."):
+            with st.spinner(f"Retrieving candidate passages via {selected_method} and extracting grounded answer..."):
                 # Select active retriever
                 if selected_method == "Hybrid":
                     active_retriever = hybrid_retriever
@@ -1146,78 +1494,80 @@ def main() -> None:
                     min_similarity=min_similarity,
                 )
 
-                # Phase 4: Extract answer from retrieved passages
+                # Extract answer from retrieved passages
                 qa_result = qa_engine.answer(
                     question=cleaned_q,
                     retrieved_chunks=retrieved_results,
                     max_sentences=max_sentences,
                 )
 
-            # =================================================================
-            # Requirement 11, 12, 13, 15: Answer Presentation
-            # =================================================================
+            # Answer Presentation
             if qa_result["found"]:
-                st.markdown("### 💡 Answer")
+                st.markdown("### 💡 Grounded Answer")
                 st.markdown(
                     f"""
                     <div class="answer-card">
-                        <div class="answer-title">✓ Grounded Answer (Extracted from Document)</div>
+                        <div class="answer-badge">
+                            <span style="font-weight: bold; font-size: 0.95rem;">✓</span> GROUNDED FACTUAL ANSWER &bull; EXTRACTED VERBATIM
+                        </div>
                         <div class="answer-text">{qa_result['answer']}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-                # Requirement 12: Source Attribution Section
-                score_label = "Hybrid Score" if selected_method == "Hybrid" else "Retrieval Similarity"
+                # Source Attribution Section
+                score_label = "Hybrid Score" if selected_method == "Hybrid" else "Similarity Score"
                 st.markdown(
                     f"""
                     <div class="source-container">
-                        <span style="font-weight: 700; font-size: 0.82rem; color: #475569; text-transform: uppercase;">Source Attribution:</span>
-                        <span class="meta-tag"><b>Retrieval Method:</b> {selected_method}</span>
-                        <span class="meta-tag"><b>Document:</b> {qa_result['source']}</span>
+                        <span style="font-weight: 700; font-size: 0.8rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Citations:</span>
+                        <span class="meta-tag"><b>Retriever:</b> {selected_method}</span>
+                        <span class="meta-tag"><b>Source:</b> {qa_result['source']}</span>
                         <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
                         <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
-                        <span class="meta-tag"><b>{score_label}:</b> {qa_result['similarity_score'] * 100:.2f}%</span>
-                        <span class="meta-tag"><b>Sentence Score:</b> {qa_result['sentence_score']:.2f}</span>
+                        <span class="meta-tag"><b>{score_label}:</b> {qa_result['similarity_score'] * 100:.2f}% ({qa_result['similarity_score']:.4f})</span>
+                        <span class="meta-tag"><b>Sentence Salience:</b> {qa_result['sentence_score']:.2f}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-                # Requirement 13: Evidence Section
+                # Evidence Section
                 with st.expander("📜 Retrieved Evidence (Ground Truth Passage)", expanded=True):
-                    st.caption("The exact original passage from which the answer was extracted.")
-                    st.text_area(
-                        label="Original Evidence Passage",
-                        value=qa_result["evidence"],
-                        height=110,
-                        key=f"evidence_{qa_result['chunk_id']}",
-                        disabled=True,
+                    st.caption("The exact original passage from which the answer was extracted:")
+                    st.markdown(
+                        f"""
+                        <div class="evidence-quote-box">
+                            "{qa_result['evidence']}"
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
                     )
 
             else:
-                # Requirement 15: No-Answer UI
-                st.markdown("### 💡 Answer")
+                # No-Answer UI
+                st.markdown("### 💡 Answer Status")
                 st.markdown(
                     f"""
                     <div class="no-answer-card">
-                        <div class="no-answer-title">❌ No Answer Found</div>
-                        <div class="no-answer-msg">No answer could be found in the uploaded document.</div>
-                        <div style="font-size: 0.88rem; color: #7f1d1d; margin-top: 0.4rem;">
-                            <b>Reason:</b> {qa_result['reason']}
+                        <div class="no-answer-badge">⚠️ NO SUPPORTING EVIDENCE FOUND</div>
+                        <div class="no-answer-msg">No sufficiently relevant answer could be found in the uploaded document.</div>
+                        <div class="no-answer-reason">
+                            <b>Strict Grounding Reason:</b> {qa_result['reason']}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #7F1D1D; margin-top: 0.5rem;">
+                            💡 <i>Tip: The extractive QA engine enforces zero hallucinations. Try rephrasing your question or lowering the similarity threshold in the sidebar.</i>
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-            # =================================================================
-            # Requirement 14 & Phase 7: Top Retrieved Passages Section
-            # =================================================================
+            # Top Retrieved Passages Section
             with st.expander(f"🔍 Top Retrieved Passages ({selected_method})", expanded=False):
                 st.caption(
-                    f"Inspect all candidate passages retrieved by {selected_method} that were analyzed by the QA engine."
+                    f"Inspect all candidate passages retrieved by {selected_method} that were evaluated by the QA engine."
                 )
 
                 if not retrieved_results:
@@ -1234,7 +1584,6 @@ def main() -> None:
                         else:
                             sim_class = "similarity-low"
 
-                        # Section 9: For Hybrid show Rank, Hybrid Score, TF-IDF Score, Semantic Score, Page, Chunk ID, Source
                         if selected_method == "Hybrid":
                             meta_scores_html = f"""
                                 <span class="rank-pill">Rank #{rank}</span>
@@ -1271,7 +1620,7 @@ def main() -> None:
     st.markdown("---")
 
     # =========================================================================
-    # PHASE 6: RETRIEVAL EVALUATION & BENCHMARKING SECTION
+    # RETRIEVAL EVALUATION & BENCHMARKING SECTION
     # =========================================================================
     st.markdown("## ⚖️ Retrieval Evaluation & Benchmarking")
     st.caption(
@@ -1380,7 +1729,7 @@ def main() -> None:
                         min_similarity=eval_min_sim,
                     )
                     st.session_state["phase6_evaluation_result"] = comparison_result
-                    st.success("✓ Evaluation completed successfully!")
+                    st.success("✓ Retrieval evaluation completed successfully!")
                 except Exception as exc:
                     logger.error(f"Evaluation error: {exc}", exc_info=True)
                     st.error(f"❌ Evaluation Error: {exc}")
@@ -1401,41 +1750,54 @@ def main() -> None:
         with t_overall:
             st.caption("Standardized Information Retrieval metrics comparing Lexical TF-IDF, Dense Semantic, and Hybrid retrieval across the dataset.")
 
-            df_metrics = pd.DataFrame(eval_res.overall_metrics_table)
-            st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+            # Metric Definition Tooltips
+            st.markdown(
+                """
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span class="meta-tag" title="Whether at least one ground-truth passage was ranked within the top K.">🎯 <b>Hit@K:</b> Top-K Accuracy</span>
+                    <span class="meta-tag" title="Mean Reciprocal Rank evaluates how early the first relevant passage appears.">🥇 <b>MRR:</b> Mean Reciprocal Rank (1/rank)</span>
+                    <span class="meta-tag" title="Fraction of top-K retrieved passages that are ground-truth relevant.">⚖️ <b>Precision@K:</b> Exactness</span>
+                    <span class="meta-tag" title="Fraction of all relevant passages retrieved in the top-K.">📡 <b>Recall@K:</b> Completeness</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-            # High-level metric highlights
+            # High-level metric highlights across methods
             hybrid_summary = eval_res.summaries.get("Hybrid")
             tfidf_summary = eval_res.summaries.get("TF-IDF")
             semantic_summary = eval_res.summaries.get("Semantic")
-            highlight_summary = hybrid_summary or semantic_summary
 
-            if highlight_summary:
-                eval_max_k = max(eval_res.k_values)
-                hl_name = "Hybrid" if hybrid_summary else "Semantic"
-                c_m1, c_m2, c_m3, c_m4 = st.columns(4)
-                with c_m1:
+            eval_max_k = max(eval_res.k_values)
+            m_cols = st.columns(3)
+
+            if hybrid_summary:
+                with m_cols[0]:
                     st.metric(
-                        f"Hit@{eval_max_k} ({hl_name})",
-                        f"{highlight_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
+                        label=f"Hybrid Hit@{eval_max_k} / MRR",
+                        value=f"{hybrid_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
+                        delta=f"MRR: {hybrid_summary.mrr:.4f}",
+                        delta_color="normal",
                     )
-                with c_m2:
+            if semantic_summary:
+                with m_cols[1]:
                     st.metric(
-                        f"MRR ({hl_name})",
-                        f"{highlight_summary.mrr:.4f}",
+                        label=f"Semantic Hit@{eval_max_k} / MRR",
+                        value=f"{semantic_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
+                        delta=f"MRR: {semantic_summary.mrr:.4f}",
+                        delta_color="normal",
                     )
-                with c_m3:
+            if tfidf_summary:
+                with m_cols[2]:
                     st.metric(
-                        f"Precision@{eval_max_k} ({hl_name})",
-                        f"{highlight_summary.precision_at_k.get(eval_max_k, 0.0):.4f}",
-                        delta_color="off",
+                        label=f"TF-IDF Hit@{eval_max_k} / MRR",
+                        value=f"{tfidf_summary.hit_rates.get(eval_max_k, 0.0):.4f}",
+                        delta=f"MRR: {tfidf_summary.mrr:.4f}",
+                        delta_color="normal",
                     )
-                with c_m4:
-                    st.metric(
-                        f"Recall@{eval_max_k} ({hl_name})",
-                        f"{highlight_summary.recall_at_k.get(eval_max_k, 0.0):.4f}",
-                        delta_color="off",
-                    )
+
+            df_metrics = pd.DataFrame(eval_res.overall_metrics_table)
+            st.dataframe(df_metrics, use_container_width=True, hide_index=True)
 
         with t_cat:
             st.caption("Performance comparison broken down by linguistic query category.")
@@ -1498,13 +1860,12 @@ def main() -> None:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
 
-
     # =========================================================================
-    # PHASE 2: DOCUMENT CHUNKING SECTION (Maintained for full inspection)
+    # DOCUMENT CHUNKS & PREPROCESSING INSPECTION (Maintained for full inspection)
     # =========================================================================
-    st.markdown("## 🧩 Document Chunking")
-    st.success(
-        f"✓ Document processed &bull; ✓ Text chunking completed &bull; **{len(chunks)} chunks created** "
+    st.markdown("## 🧩 Document Chunks & Inspection")
+    st.caption(
+        f"Verified text chunking: {len(chunks)} chunks created from {doc_stats['pages_with_text']} pages "
         f"(Chunk size: {chunk_size} chars | Overlap: {chunk_overlap} chars)"
     )
 
@@ -1518,15 +1879,15 @@ def main() -> None:
             </div>
             <div class="metric-card">
                 <div class="metric-label">Avg Chunk Size</div>
-                <div class="metric-val">{chunk_stats["avg_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">chars</span></div>
+                <div class="metric-val">{chunk_stats["avg_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748B;">chars</span></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Min Chunk Size</div>
-                <div class="metric-val">{chunk_stats["min_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">chars</span></div>
+                <div class="metric-val">{chunk_stats["min_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748B;">chars</span></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Max Chunk Size</div>
-                <div class="metric-val">{chunk_stats["max_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">chars</span></div>
+                <div class="metric-val">{chunk_stats["max_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748B;">chars</span></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Pages with Chunks</div>
@@ -1534,7 +1895,7 @@ def main() -> None:
             </div>
             <div class="metric-card">
                 <div class="metric-label">Avg Cleaned Size</div>
-                <div class="metric-val">{chunk_stats["avg_cleaned_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">chars</span></div>
+                <div class="metric-val">{chunk_stats["avg_cleaned_chunk_size"]} <span style="font-size: 0.8rem; font-weight: normal; color: #64748B;">chars</span></div>
             </div>
         </div>
         """,
@@ -1568,7 +1929,7 @@ def main() -> None:
     with st.expander("📑 View Chunks", expanded=False):
         st.caption(
             "Inspect individual chunk contents and metadata. Both original text (for user-facing display) "
-            "and cleaned text (for Phase 3 retrieval/vectorization) are preserved."
+            "and cleaned text (for retrieval and vectorization) are preserved."
         )
 
         if not chunks:
@@ -1655,10 +2016,8 @@ def main() -> None:
                             disabled=True,
                         )
 
-    # =========================================================================
-    # PHASE 1: PAGE-WISE RAW INSPECTION (Regression support)
-    # =========================================================================
-    with st.expander("🔍 View Phase 1 Extracted Pages (Page-Level Inspection)", expanded=False):
+    # Page-wise Raw Inspection
+    with st.expander("🔍 View Extracted Pages (Page-Level Inspection)", expanded=False):
         st.caption("Inspect the page-by-page extracted text, cleaned text, tokens, and stop-word filtered tokens.")
 
         if num_pages > 1:
