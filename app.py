@@ -12,6 +12,7 @@ Production-grade Document Intelligence and Grounded Question Answering System:
 from __future__ import annotations
 
 import io
+import hashlib
 import logging
 import sys
 from pathlib import Path
@@ -1254,6 +1255,9 @@ def main() -> None:
     )
 
     if uploaded_file is None:
+        # Clear document session state when no document is active
+        for key in ["active_doc_hash", "cached_pipeline_key", "cached_pipeline_data", "phase6_evaluation_result", "current_qa_state"]:
+            st.session_state.pop(key, None)
         render_empty_state()
         return
 
@@ -1263,96 +1267,129 @@ def main() -> None:
         st.error("⚠️ The uploaded file is empty (0 bytes). Please upload a valid PDF document.")
         return
 
-    # Step 1: Ingestion & Text Processing
-    try:
-        with st.spinner("Parsing PDF and preprocessing text page-by-page..."):
-            raw_pages = extract_text_from_pdf(io.BytesIO(file_bytes))
-            num_pages = len(raw_pages)
+    # Document Identity Tracking via stable SHA-256 content hash
+    doc_hash = hashlib.sha256(file_bytes).hexdigest()
 
-            if num_pages == 0:
-                st.error("⚠️ The PDF contains 0 pages.")
-                return
+    # When active document changes, invalidate document-specific cache, QA state, and evaluation results
+    if st.session_state.get("active_doc_hash") != doc_hash:
+        st.session_state["active_doc_hash"] = doc_hash
+        st.session_state.pop("phase6_evaluation_result", None)
+        st.session_state.pop("current_qa_state", None)
+        st.session_state.pop("cached_pipeline_key", None)
+        st.session_state.pop("cached_pipeline_data", None)
 
-            processed_pages = process_page_data(raw_pages, remove_punctuation_in_filter=False)
-            doc_stats = calculate_document_stats(processed_pages)
+    pipeline_key = (doc_hash, chunk_size, chunk_overlap)
+    cached_pipe = st.session_state.get("cached_pipeline_data")
 
-    except PDFProcessingError as p_err:
-        logger.error(f"PDF extraction error: {p_err}", exc_info=True)
-        st.error(f"❌ PDF Processing Error: {p_err}")
-        return
-    except TextProcessingError as t_err:
-        logger.error(f"NLP processing error: {t_err}", exc_info=True)
-        st.error(f"❌ Text Preprocessing Error: {t_err}")
-        return
-    except Exception as exc:
-        logger.error(f"Unexpected ingestion error: {exc}", exc_info=True)
-        st.error(f"❌ An unexpected error occurred while processing the PDF: {exc}")
-        return
+    if st.session_state.get("cached_pipeline_key") == pipeline_key and cached_pipe is not None:
+        processed_pages = cached_pipe["processed_pages"]
+        doc_stats = cached_pipe["doc_stats"]
+        chunks = cached_pipe["chunks"]
+        chunk_stats = cached_pipe["chunk_stats"]
+        tfidf_retriever = cached_pipe["tfidf_retriever"]
+        semantic_retriever = cached_pipe["semantic_retriever"]
+    else:
+        # Step 1: Ingestion & Text Processing
+        try:
+            with st.spinner("Parsing PDF and preprocessing text page-by-page..."):
+                raw_pages = extract_text_from_pdf(io.BytesIO(file_bytes))
+                num_pages = len(raw_pages)
 
-    # Check if any extractable text was found
-    if doc_stats["pages_with_text"] == 0:
-        st.warning(
-            "⚠️ No extractable text was found in this document. "
-            "It may contain scanned images, drawings, or non-extractable text without an OCR layer."
-        )
-        return
+                if num_pages == 0:
+                    st.error("⚠️ The PDF contains 0 pages.")
+                    return
 
-    # Step 2: Document Chunking
-    try:
-        with st.spinner("Partitioning text into retrievable passages with context overlap..."):
-            chunks = chunk_document(
-                processed_pages=processed_pages,
-                source=uploaded_file.name,
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
+                processed_pages = process_page_data(raw_pages, remove_punctuation_in_filter=False)
+                doc_stats = calculate_document_stats(processed_pages)
+
+        except PDFProcessingError as p_err:
+            logger.error(f"PDF extraction error: {p_err}", exc_info=True)
+            st.error(f"❌ PDF Processing Error: {p_err}")
+            return
+        except TextProcessingError as t_err:
+            logger.error(f"NLP processing error: {t_err}", exc_info=True)
+            st.error(f"❌ Text Preprocessing Error: {t_err}")
+            return
+        except Exception as exc:
+            logger.error(f"Unexpected ingestion error: {exc}", exc_info=True)
+            st.error(f"❌ An unexpected error occurred while processing the PDF: {exc}")
+            return
+
+        # Check if any extractable text was found
+        if doc_stats["pages_with_text"] == 0:
+            st.warning(
+                "⚠️ No extractable text was found in this document. "
+                "It may contain scanned images, drawings, or non-extractable text without an OCR layer."
             )
-            is_valid, validation_issues = validate_chunks(chunks)
-            if not is_valid:
-                st.warning(f"⚠️ Chunk validation warnings: {', '.join(validation_issues)}")
+            return
 
-            chunk_stats = calculate_chunk_stats(chunks, processed_pages)
+        # Step 2: Document Chunking
+        try:
+            with st.spinner("Partitioning text into retrievable passages with context overlap..."):
+                chunks = chunk_document(
+                    processed_pages=processed_pages,
+                    source=uploaded_file.name,
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                )
+                is_valid, validation_issues = validate_chunks(chunks)
+                if not is_valid:
+                    st.warning(f"⚠️ Chunk validation warnings: {', '.join(validation_issues)}")
 
-    except ChunkingError as c_err:
-        logger.error(f"Chunking error: {c_err}", exc_info=True)
-        st.error(f"❌ Chunking Error: {c_err}")
-        return
-    except Exception as exc:
-        logger.error(f"Unexpected chunking error: {exc}", exc_info=True)
-        st.error(f"❌ An unexpected error occurred during chunking: {exc}")
-        return
+                chunk_stats = calculate_chunk_stats(chunks, processed_pages)
 
-    # Step 3: Index Document Chunks for TF-IDF, Semantic, and Hybrid Retrieval
-    try:
-        with st.spinner("Building lexical TF-IDF index and computing dense neural embeddings..."):
-            tfidf_retriever = TFIDFRetriever(chunks)
+        except ChunkingError as c_err:
+            logger.error(f"Chunking error: {c_err}", exc_info=True)
+            st.error(f"❌ Chunking Error: {c_err}")
+            return
+        except Exception as exc:
+            logger.error(f"Unexpected chunking error: {exc}", exc_info=True)
+            st.error(f"❌ An unexpected error occurred during chunking: {exc}")
+            return
 
-            # Initialize Semantic Retriever with cached SentenceTransformer and cached embeddings
-            transformer_model = load_cached_transformer()
-            chunk_texts_tuple = tuple(
-                (c.get("original_text") or c.get("cleaned_text", "")).strip() for c in chunks
-            )
-            cached_chunk_embs = get_cached_chunk_embeddings(transformer_model, chunk_texts_tuple)
-            semantic_retriever = SemanticRetriever(
-                chunks=chunks,
-                model=transformer_model,
-                chunk_embeddings=cached_chunk_embs,
-            )
+        # Step 3: Index Document Chunks for TF-IDF, Semantic, and Hybrid Retrieval
+        try:
+            with st.spinner("Building lexical TF-IDF index and computing dense neural embeddings..."):
+                tfidf_retriever = TFIDFRetriever(chunks)
 
-            # Initialize Hybrid Retriever reusing existing instances
-            hybrid_retriever = HybridRetriever(
-                chunks=chunks,
-                alpha=hybrid_alpha,
-                tfidf_retriever=tfidf_retriever,
-                semantic_retriever=semantic_retriever,
-            )
-    except (RetrievalError, SemanticRetrievalError, HybridRetrievalError) as r_err:
-        logger.error(f"Retriever initialization error: {r_err}", exc_info=True)
-        st.error(f"❌ Retrieval Engine Error: {r_err}")
-        return
-    except Exception as exc:
-        logger.error(f"Unexpected retriever error: {exc}", exc_info=True)
-        st.error(f"❌ Failed to build retrieval engines: {exc}")
-        return
+                # Initialize Semantic Retriever with cached SentenceTransformer and cached embeddings
+                transformer_model = load_cached_transformer()
+                chunk_texts_tuple = tuple(
+                    (c.get("original_text") or c.get("cleaned_text", "")).strip() for c in chunks
+                )
+                cached_chunk_embs = get_cached_chunk_embeddings(transformer_model, chunk_texts_tuple)
+                semantic_retriever = SemanticRetriever(
+                    chunks=chunks,
+                    model=transformer_model,
+                    chunk_embeddings=cached_chunk_embs,
+                )
+
+                # Cache pipeline data for instantaneous reruns
+                st.session_state["cached_pipeline_key"] = pipeline_key
+                st.session_state["cached_pipeline_data"] = {
+                    "processed_pages": processed_pages,
+                    "doc_stats": doc_stats,
+                    "chunks": chunks,
+                    "chunk_stats": chunk_stats,
+                    "tfidf_retriever": tfidf_retriever,
+                    "semantic_retriever": semantic_retriever,
+                }
+        except (RetrievalError, SemanticRetrievalError, HybridRetrievalError) as r_err:
+            logger.error(f"Retriever initialization error: {r_err}", exc_info=True)
+            st.error(f"❌ Retrieval Engine Error: {r_err}")
+            return
+        except Exception as exc:
+            logger.error(f"Unexpected retriever error: {exc}", exc_info=True)
+            st.error(f"❌ Failed to build retrieval engines: {exc}")
+            return
+
+    # Initialize Hybrid Retriever reusing existing instances with active hybrid_alpha
+    hybrid_retriever = HybridRetriever(
+        chunks=chunks,
+        alpha=hybrid_alpha,
+        tfidf_retriever=tfidf_retriever,
+        semantic_retriever=semantic_retriever,
+    )
 
     # Initialize Extractive QA Engine
     qa_engine = ExtractiveQAEngine()
@@ -1472,12 +1509,13 @@ def main() -> None:
         st.caption("🔤 **Lexical TF-IDF Mode Active:** Using sparse n-gram vector matching with sublinear term frequency scaling.")
 
     # Retrieval & QA Pipeline Execution
-    if query_input:
-        cleaned_q = query_input.strip()
+    if search_clicked:
+        cleaned_q = query_input.strip() if query_input else ""
 
         # Handle empty / whitespace / punctuation-only question
         if not cleaned_q or not any(c.isalnum() for c in cleaned_q):
             st.warning("⚠️ Please enter a question containing valid words or alphanumeric keywords.")
+            st.session_state.pop("current_qa_state", None)
         else:
             with st.spinner(f"Retrieving candidate passages via {selected_method} and extracting grounded answer..."):
                 # Select active retriever
@@ -1502,68 +1540,90 @@ def main() -> None:
                     max_sentences=max_sentences,
                 )
 
-            # Answer Presentation
-            if qa_result["found"]:
-                st.markdown("### 💡 Grounded Answer")
-                st.markdown(
-                    f"""
-                    <div class="answer-card">
-                        <div class="answer-badge">
-                            <span style="font-weight: bold; font-size: 0.95rem;">✓</span> GROUNDED FACTUAL ANSWER &bull; EXTRACTED VERBATIM
-                        </div>
-                        <div class="answer-text">{qa_result['answer']}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.session_state["current_qa_state"] = {
+                    "question": cleaned_q,
+                    "qa_result": qa_result,
+                    "selected_method": selected_method,
+                    "retrieved_results": retrieved_results,
+                }
 
-                # Source Attribution Section
-                score_label = "Hybrid Score" if selected_method == "Hybrid" else "Similarity Score"
-                st.markdown(
-                    f"""
-                    <div class="source-container">
-                        <span style="font-weight: 700; font-size: 0.8rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Citations:</span>
-                        <span class="meta-tag"><b>Retriever:</b> {selected_method}</span>
-                        <span class="meta-tag"><b>Source:</b> {qa_result['source']}</span>
-                        <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
-                        <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
-                        <span class="meta-tag"><b>{score_label}:</b> {qa_result['similarity_score'] * 100:.2f}% ({qa_result['similarity_score']:.4f})</span>
-                        <span class="meta-tag"><b>Sentence Salience:</b> {qa_result['sentence_score']:.2f}</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+    # Render Current QA Result from Session State
+    if "current_qa_state" in st.session_state:
+        qa_state = st.session_state["current_qa_state"]
+        qa_result = qa_state["qa_result"]
+        qa_method = qa_state["selected_method"]
+        retrieved_results = qa_state["retrieved_results"]
 
-                # Evidence Section
-                with st.expander("📜 Retrieved Evidence (Ground Truth Passage)", expanded=True):
-                    st.caption("The exact original passage from which the answer was extracted:")
-                    st.markdown(
-                        f"""
-                        <div class="evidence-quote-box">
-                            "{qa_result['evidence']}"
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-
+        # Answer Presentation
+        if qa_result.get("found") and qa_result.get("answer"):
+            salience = float(qa_result.get("sentence_score", 0.0))
+            if salience >= 0.25:
+                badge_html = '<span style="font-weight: bold; font-size: 0.95rem;">✓</span> GROUNDED FACTUAL ANSWER &bull; HIGH SALIENCE'
+                badge_style = ""
             else:
-                # No-Answer UI
-                st.markdown("### 💡 Answer Status")
+                badge_html = '<span style="font-weight: bold; font-size: 0.95rem;">ℹ️</span> CANDIDATE EXTRACTED PASSAGE &bull; MODERATE SALIENCE'
+                badge_style = 'style="background: #FEF3C7 !important; color: #92400E !important; border: 1px solid #FDE68A !important;"'
+
+            st.markdown("### 💡 Grounded Answer")
+            st.markdown(
+                f"""
+                <div class="answer-card">
+                    <div class="answer-badge" {badge_style}>
+                        {badge_html}
+                    </div>
+                    <div class="answer-text">{qa_result['answer']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Source Attribution Section
+            score_label = "Hybrid Score" if qa_method == "Hybrid" else "Similarity Score"
+            st.markdown(
+                f"""
+                <div class="source-container">
+                    <span style="font-weight: 700; font-size: 0.8rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Citations:</span>
+                    <span class="meta-tag"><b>Retriever:</b> {qa_method}</span>
+                    <span class="meta-tag"><b>Source:</b> {qa_result['source']}</span>
+                    <span class="meta-tag"><b>Page:</b> {qa_result['page']}</span>
+                    <span class="meta-tag"><b>Chunk:</b> <code>{qa_result['chunk_id']}</code></span>
+                    <span class="meta-tag"><b>{score_label}:</b> {qa_result['similarity_score'] * 100:.2f}% ({qa_result['similarity_score']:.4f})</span>
+                    <span class="meta-tag"><b>Sentence Salience:</b> {qa_result['sentence_score']:.2f}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Evidence Section
+            with st.expander("📜 Retrieved Evidence (Ground Truth Passage)", expanded=True):
+                st.caption("The exact original passage from which the answer was extracted:")
                 st.markdown(
                     f"""
-                    <div class="no-answer-card">
-                        <div class="no-answer-badge">⚠️ NO SUPPORTING EVIDENCE FOUND</div>
-                        <div class="no-answer-msg">I couldn't find a sufficiently relevant answer in this document. Try rephrasing your question or check whether the document contains the information.</div>
-                        <div class="no-answer-reason">
-                            <b>Strict Grounding Reason:</b> {qa_result['reason']}
-                        </div>
-                        <div style="font-size: 0.85rem; color: #7F1D1D; margin-top: 0.5rem;">
-                            💡 <i>Tip: The extractive QA engine enforces zero hallucinations. Try rephrasing your question or lowering the similarity threshold in the sidebar.</i>
-                        </div>
+                    <div class="evidence-quote-box">
+                        "{qa_result['evidence']}"
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
+
+        else:
+            # Explicit Abstention UI (Zero-Hallucination Safe State)
+            st.markdown("### 💡 Answer Status")
+            st.markdown(
+                f"""
+                <div class="no-answer-card">
+                    <div class="no-answer-badge">⚠️ NO GROUNDED ANSWER FOUND &bull; ABSTAINED</div>
+                    <div class="no-answer-msg">I couldn't find a sufficiently relevant answer in this document.</div>
+                    <div class="no-answer-reason">
+                        <b>Strict Grounding Reason:</b> {qa_result.get('reason', 'Evidence insufficient')}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #7F1D1D; margin-top: 0.5rem;">
+                        💡 <i>Tip: The extractive QA engine enforces zero hallucinations. Check whether the requested information is present in the document.</i>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
             # Top Retrieved Passages Section
             with st.expander(f"🔍 Top Retrieved Passages ({selected_method})", expanded=False):

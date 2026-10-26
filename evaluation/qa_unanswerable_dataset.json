@@ -1,0 +1,52 @@
+[
+  {
+    "id": "u001",
+    "question": "What causes macroeconomic inflation in developing nations?",
+    "category": "unanswerable",
+    "is_answerable": false,
+    "relevant_chunk_ids": [],
+    "relevant_pages": [],
+    "source": "sample_document.pdf",
+    "rationale": "Shares generic causal verb 'causes', but economic inflation is entirely absent from this NLP text."
+  },
+  {
+    "id": "u002",
+    "question": "What is a relational database management system?",
+    "category": "unanswerable",
+    "is_answerable": false,
+    "relevant_chunk_ids": [],
+    "relevant_pages": [],
+    "source": "sample_document.pdf",
+    "rationale": "Shares definition question structure 'What is', but database management is absent from this text."
+  },
+  {
+    "id": "u003",
+    "question": "How much attendance is required for the final examination?",
+    "category": "unanswerable",
+    "is_answerable": false,
+    "relevant_chunk_ids": [],
+    "relevant_pages": [],
+    "source": "sample_document.pdf",
+    "rationale": "Shares quantity heuristic 'How much', but attendance policies are absent from this document."
+  },
+  {
+    "id": "u004",
+    "question": "What is the semester tuition fee for international graduate students?",
+    "category": "unanswerable",
+    "is_answerable": false,
+    "relevant_chunk_ids": [],
+    "relevant_pages": [],
+    "source": "sample_document.pdf",
+    "rationale": "Shares numeric/monetary question format, but university fees are absent from this NLP document."
+  },
+  {
+    "id": "u005",
+    "question": "Which hazardous items are strictly prohibited in the chemistry laboratory?",
+    "category": "unanswerable",
+    "is_answerable": false,
+    "relevant_chunk_ids": [],
+    "relevant_pages": [],
+    "source": "sample_document.pdf",
+    "rationale": "Tests negation and prohibition; chemistry lab safety is completely absent from this document."
+  }
+]

@@ -268,7 +268,7 @@ streamlit run app.py
 
 ## Running Automated Tests
 
-Run the complete test suite across all 7 phases (**79 tests**):
+Run the complete test suite across all 7 phases and edge case regressions (**106 tests**):
 
 ```bash
 python -m unittest discover tests
@@ -277,19 +277,22 @@ python -m unittest discover tests
 To run individual test suites:
 
 ```bash
-python -m unittest tests/test_hybrid_retriever.py   # Phase 7 Hybrid (18 tests)
-python -m unittest tests/test_evaluator.py          # Phase 6 Evaluation (14 tests)
-python -m unittest tests/test_semantic_retriever.py # Phase 5 Semantic (10 tests)
-python -m unittest tests/test_phase4.py             # Phase 4 QA Engine (10 tests)
-python -m unittest tests/test_phase3.py             # Phase 3 TF-IDF (10 tests)
-python -m unittest tests/test_phase2.py             # Phase 2 Chunking (9 tests)
-python -m unittest tests/test_phase1.py             # Phase 1 Ingestion (8 tests)
+python -m unittest tests/test_remediation_edge_cases.py   # Edge Case Remediation (20 tests)
+python -m unittest tests/test_qa_relevance_regression.py  # QA Relevance & Grounding (7 tests)
+python -m unittest tests/test_hybrid_retriever.py         # Phase 7 Hybrid (18 tests)
+python -m unittest tests/test_evaluator.py                # Phase 6 Evaluation (11 tests)
+python -m unittest tests/test_semantic_retriever.py       # Phase 5 Semantic (11 tests)
+python -m unittest tests/test_phase4.py                   # Phase 4 QA Engine (12 tests)
+python -m unittest tests/test_phase3.py                   # Phase 3 TF-IDF (10 tests)
+python -m unittest tests/test_phase2.py                   # Phase 2 Chunking (10 tests)
+python -m unittest tests/test_phase1.py                   # Phase 1 Ingestion (7 tests)
 ```
 
 ---
 
-## Running the CLI Evaluation Benchmark
+## Running Evaluation Benchmarks
 
+### 1. Retrieval Quality Benchmark
 To execute the benchmark runner comparing TF-IDF, Semantic, and Hybrid retrieval across multiple weights:
 
 ```bash
@@ -297,3 +300,10 @@ python evaluation/run_benchmark.py
 ```
 
 Outputs comprehensive metric tables to the console and updates `evaluation/results.csv` and `evaluation/summary.csv`.
+
+### 2. QA Correctness & Abstention Benchmark
+To measure answer extraction recall on ground-truth questions alongside false-positive rejection accuracy on unanswerable/misleading questions:
+
+```bash
+python evaluation/run_qa_abstention_benchmark.py
+```

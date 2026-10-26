@@ -9,6 +9,7 @@ for downstream vectorization and similarity retrieval in Phase 3.
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any, Optional
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -20,9 +21,10 @@ DEFAULT_CHUNK_SIZE: int = 500
 DEFAULT_CHUNK_OVERLAP: int = 50
 DEFAULT_MIN_CHUNK_SIZE: int = 20
 
-# Common interrogatives to preserve in retrieval text for QA query-document matching
+# Common interrogatives and polarity/negation tokens to preserve in retrieval text for QA query-document matching
 QUESTION_WORDS: set[str] = {
-    "what", "which", "who", "whom", "where", "when", "why", "how"
+    "what", "which", "who", "whom", "where", "when", "why", "how",
+    "not", "no", "never", "neither", "nor", "without", "none",
 }
 
 
@@ -32,13 +34,13 @@ class ChunkingError(Exception):
 
 
 def get_retrieval_stopwords(language: str = "english") -> set[str]:
-    """Return stop words for retrieval, retaining interrogatives for QA matching.
+    """Return stop words for retrieval, retaining interrogatives and negations for QA matching.
 
     Args:
         language: Language of stopwords (default: 'english').
 
     Returns:
-        Set of stop words excluding question words.
+        Set of stop words excluding question and polarity words.
     """
     ensure_nltk_resources()
     try:
@@ -52,7 +54,7 @@ def clean_chunk_text(text: str, language: str = "english") -> str:
     """Prepare cleaned text for retrieval/vectorization.
 
     Converts text to lowercase, removes punctuation and standard stop-words
-    (while retaining question words), and normalizes spacing. Falls back to all
+    (while retaining question and negation words), and normalizes spacing. Falls back to all
     lowercased alphanumeric tokens if all words are stop-words.
 
     Args:
@@ -65,8 +67,9 @@ def clean_chunk_text(text: str, language: str = "english") -> str:
     if not text or not text.strip():
         return ""
 
-    # Normalize special characters and spacing
-    text_clean = text.replace("\x00", "").replace("\xad", "").replace("\u200b", "")
+    # Normalize unicode ligatures, special characters, and spacing
+    text_clean = unicodedata.normalize("NFKD", text)
+    text_clean = text_clean.replace("\x00", "").replace("\xad", "").replace("\u200b", "")
     text_clean = text_clean.replace("\xa0", " ").replace("\u202f", " ")
     text_clean = re.sub(r"[ \t]+", " ", text_clean)
 
@@ -85,7 +88,10 @@ def clean_chunk_text(text: str, language: str = "english") -> str:
 
 
 def get_overlap_prefix(text: str, overlap_size: int) -> str:
-    """Extract an overlap prefix from the tail of text at clean word boundaries.
+    """Extract an overlap prefix from the tail of text respecting sentence boundaries where possible.
+
+    Prioritizes complete trailing sentences to avoid creating incomplete sentence fragments.
+    Falls back to clean word boundaries if sentences are longer than the overlap budget.
 
     Args:
         text: The source chunk text.
@@ -101,6 +107,26 @@ def get_overlap_prefix(text: str, overlap_size: int) -> str:
     if len(text) <= overlap_size:
         return text
 
+    # Try sentence-level boundary first
+    try:
+        ensure_nltk_resources()
+        sentences = sent_tokenize(text)
+        if len(sentences) > 1:
+            candidate_sents: list[str] = []
+            accum_len = 0
+            for sent in reversed(sentences):
+                added = len(sent) + (1 if candidate_sents else 0)
+                if accum_len + added <= int(overlap_size * 1.5):
+                    candidate_sents.insert(0, sent)
+                    accum_len += added
+                else:
+                    break
+            if candidate_sents and len(candidate_sents) < len(sentences):
+                return " ".join(candidate_sents).strip()
+    except Exception:
+        pass
+
+    # Word-level fallback
     tail = text[-overlap_size:]
     # Snap forward to next whitespace to avoid breaking words in the middle
     space_pos = tail.find(" ")

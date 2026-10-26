@@ -1,4 +1,13 @@
-"""Retrieval Based Question Answering - Core NLP Package."""
+"""Retrieval Based Question Answering - Core NLP Package.
+
+Uses PEP 562 lazy loading for heavy dependencies (PyTorch, SentenceTransformers)
+to ensure lightning-fast startup for lightweight utilities and tests.
+"""
+
+from __future__ import annotations
+
+import importlib
+from typing import Any
 
 from src.pdf_processor import extract_text_from_pdf, PDFProcessingError
 from src.text_processor import (
@@ -32,34 +41,44 @@ from src.qa_engine import (
     QAError,
 )
 
-from src.semantic_retriever import (
-    SemanticRetriever,
-    retrieve_semantic_chunks,
-    SemanticRetrievalError,
-)
-from src.hybrid_retriever import (
-    HybridRetriever,
-    retrieve_hybrid_chunks,
-    HybridRetrievalError,
-)
+# Heavy symbols that will be lazily loaded upon access
+_LAZY_MODULE_MAP: dict[str, str] = {
+    # Phase 5: Semantic Retrieval (Sentence Transformers / PyTorch)
+    "SemanticRetriever": "src.semantic_retriever",
+    "retrieve_semantic_chunks": "src.semantic_retriever",
+    "SemanticRetrievalError": "src.semantic_retriever",
+    # Phase 7: Hybrid Retrieval
+    "HybridRetriever": "src.hybrid_retriever",
+    "retrieve_hybrid_chunks": "src.hybrid_retriever",
+    "HybridRetrievalError": "src.hybrid_retriever",
+    # Phase 6: Evaluator
+    "compute_hit_at_k": "src.evaluator",
+    "compute_precision_at_k": "src.evaluator",
+    "compute_recall_at_k": "src.evaluator",
+    "compute_reciprocal_rank": "src.evaluator",
+    "QueryEvaluationResult": "src.evaluator",
+    "CategoryMetric": "src.evaluator",
+    "EvaluationSummary": "src.evaluator",
+    "ComparisonResult": "src.evaluator",
+    "evaluate_retriever": "src.evaluator",
+    "compare_retrieval_methods": "src.evaluator",
+    "load_evaluation_dataset": "src.evaluator",
+    "validate_dataset_against_chunks": "src.evaluator",
+    "export_results_to_csv": "src.evaluator",
+    "export_summary_to_csv": "src.evaluator",
+    "EvaluationError": "src.evaluator",
+}
 
-from src.evaluator import (
-    compute_hit_at_k,
-    compute_precision_at_k,
-    compute_recall_at_k,
-    compute_reciprocal_rank,
-    QueryEvaluationResult,
-    CategoryMetric,
-    EvaluationSummary,
-    ComparisonResult,
-    evaluate_retriever,
-    compare_retrieval_methods,
-    load_evaluation_dataset,
-    validate_dataset_against_chunks,
-    export_results_to_csv,
-    export_summary_to_csv,
-    EvaluationError,
-)
+
+def __getattr__(name: str) -> Any:
+    """Lazily load heavy modules upon attribute access."""
+    if name in _LAZY_MODULE_MAP:
+        mod = importlib.import_module(_LAZY_MODULE_MAP[name])
+        val = getattr(mod, name)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Phase 1: PDF extraction & preprocessing
@@ -98,7 +117,7 @@ __all__ = [
     "HybridRetriever",
     "retrieve_hybrid_chunks",
     "HybridRetrievalError",
-    # Phase 6: Retrieval Evaluation
+    # Phase 6: IR Evaluator
     "compute_hit_at_k",
     "compute_precision_at_k",
     "compute_recall_at_k",
@@ -115,4 +134,3 @@ __all__ = [
     "export_summary_to_csv",
     "EvaluationError",
 ]
-

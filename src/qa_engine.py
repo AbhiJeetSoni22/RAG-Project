@@ -32,12 +32,51 @@ class QAError(Exception):
     pass
 
 
-def get_content_words(text: str, language: str = "english") -> set[str]:
+# Generic predicate verbs and functional connectors that MUST NOT falsely satisfy topical relevance
+GENERIC_PREDICATE_WORDS: set[str] = {
+    "cause", "causes", "caused", "causing",
+    "provide", "provides", "provided", "providing",
+    "include", "includes", "included", "including",
+    "require", "requires", "required", "requiring",
+    "describe", "describes", "described", "describing",
+    "stand", "stands", "stood",
+    "refer", "refers", "referred",
+    "mean", "means", "meant", "meaning",
+    "use", "uses", "used", "using",
+    "make", "makes", "made",
+    "give", "gives", "given",
+    "show", "shows", "shown",
+    "relate", "relates", "related",
+    "need", "needs", "needed",
+    "contain", "contains", "contained",
+    "differ", "differs", "differed",
+    "involve", "involves", "involved",
+    "affect", "affects", "affected",
+    "apply", "applies", "applied",
+    "occur", "occurs", "occurred",
+    "work", "works", "worked",
+    "allow", "allows", "allowed", "allowing",
+    "permit", "permits", "permitted", "permitting",
+    "produce", "produces", "produced", "producing",
+    "represent", "represents", "represented", "representing",
+}
+
+NEGATION_TOKENS: set[str] = {"not", "no", "never", "neither", "nor", "without", "none"}
+PROHIBITION_TERMS: set[str] = {"prohibited", "forbidden", "banned", "disallowed", "restricted", "cannot", "mustn't", "shouldn't"}
+PERMISSION_TERMS: set[str] = {"permitted", "allowed", "can", "may", "authorized", "eligible", "acceptable"}
+
+
+def get_content_words(
+    text: str,
+    language: str = "english",
+    preserve_negations: bool = True,
+) -> set[str]:
     """Extract lowercase alphanumeric content words excluding stop words.
 
     Args:
         text: Input string.
         language: Language of stop words.
+        preserve_negations: If True, preserves negation and polarity words.
 
     Returns:
         Set of content words.
@@ -48,6 +87,8 @@ def get_content_words(text: str, language: str = "english") -> set[str]:
     ensure_nltk_resources()
     try:
         stops = set(stopwords.words(language))
+        if preserve_negations:
+            stops = stops - NEGATION_TOKENS
     except Exception:
         stops = set()
 
@@ -58,8 +99,10 @@ def get_content_words(text: str, language: str = "english") -> set[str]:
 def strip_leading_heading(text: str) -> str:
     """Strip prepended section headings or chapter numbers from an extracted answer sentence.
 
-    Example:
+    Examples:
         '2.1 What Machine Learning Is Machine learning is...' -> 'Machine learning is...'
+        '4.2 TF-IDF TF-IDF stands for...' -> 'TF-IDF stands for...'
+        'Section 5: Attendance Requirements Students must...' -> 'Students must...'
 
     Args:
         text: Extracted sentence text.
@@ -70,14 +113,17 @@ def strip_leading_heading(text: str) -> str:
     if not text:
         return ""
     cleaned = text.strip()
-    # Match section number and title preceding the start of a standard capitalized sentence
-    match = re.match(
-        r"^(?:(?:Chapter|Section|\b)\s*\d+(\.\d+)*\s+[A-Za-z0-9\s:,\-]{2,50}?\s+)(?=[A-Z][a-z])",
+    # Match section number and title preceding capitalized sentence start
+    cleaned = re.sub(
+        r"^(?:(?:Chapter|Section|\b)\s*\d+(\.\d+)*[:\.\-]?\s+[A-Za-z0-9\s:,\-]{2,40}?\s+)(?=[A-Z][a-z])",
+        "",
         cleaned,
     )
-    if match:
-        cleaned = cleaned[match.end():].strip()
-    return cleaned
+    # Match standalone section numbering prefix (e.g. '4.2 TF-IDF' or '1. Introduction')
+    cleaned = re.sub(r"^\s*(?:Chapter|Section|\b)\s*\d+(\.\d+)*[:\.\-]?\s*", "", cleaned)
+    # Clean leading punctuation or dashes
+    cleaned = cleaned.lstrip(".:-— \t\n\r")
+    return cleaned.strip()
 
 
 class ExtractiveQAEngine:
@@ -92,6 +138,9 @@ class ExtractiveQAEngine:
         self.language = language
         self.stemmer = PorterStemmer()
         ensure_nltk_resources()
+        self.generic_stems = {
+            self._normalize_stem(self.stemmer.stem(w)) for w in GENERIC_PREDICATE_WORDS
+        }
 
     @staticmethod
     def _normalize_stem(stem: str) -> str:
@@ -110,11 +159,14 @@ class ExtractiveQAEngine:
 
         Combines:
         1. Lexical content-word overlap ratio with exact morphological stemming.
-        2. Sentence-level TF-IDF cosine similarity excluding generic stop-words.
-        3. Strict topical gating: candidate must share substantive keywords or stems.
-        4. Informative cues (definition markers, quantity/numeric markers) strictly gated
+        2. Substantive topical entity gating: candidate MUST share topical nouns or specific concepts,
+           not merely generic predicate verbs (e.g. 'causes', 'provides', 'requires').
+        3. Polarity and negation alignment: prevents positive permission statements from answering
+           negative/prohibition questions.
+        4. Sentence-level TF-IDF cosine similarity excluding generic stop-words.
+        5. Informative cues (definition markers, quantity/numeric markers) strictly gated
            on topic match and target entity alignment.
-        5. Prior retrieval similarity from the parent chunk.
+        6. Prior retrieval similarity from the parent chunk.
 
         Args:
             sentence: Candidate sentence text.
@@ -124,19 +176,42 @@ class ExtractiveQAEngine:
         Returns:
             Continuous relevance score float.
         """
-        q_words = get_content_words(question, self.language)
+        q_words = get_content_words(question, self.language, preserve_negations=True)
         if not q_words:
             return 0.0
 
-        s_words = get_content_words(sentence, self.language)
+        s_words = get_content_words(sentence, self.language, preserve_negations=True)
         if not s_words:
             return 0.0
 
-        # Exact stems for morphological flexibility (e.g. required vs requirement, attend vs attendance)
         q_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in q_words}
         s_stems = {self._normalize_stem(self.stemmer.stem(w)) for w in s_words}
 
-        # 1. Lexical Overlap Ratio (exact word match and exact stem match)
+        # 1. Identify substantive topical question words (excluding generic verbs and interrogatives)
+        topical_q_words = {
+            w for w in q_words
+            if w not in GENERIC_PREDICATE_WORDS and w not in NEGATION_TOKENS and len(w) > 1
+        }
+        topical_q_stems = {
+            self._normalize_stem(self.stemmer.stem(w))
+            for w in topical_q_words
+            if self._normalize_stem(self.stemmer.stem(w)) not in self.generic_stems
+        }
+
+        # 2. Strict Topical Grounding Gate:
+        # If the question contains substantive topical concepts (e.g. 'inflation', 'database', 'attendance'),
+        # the candidate sentence MUST match at least one topical entity stem.
+        # Shared generic verbs (e.g. 'causes', 'includes', 'requires') alone CANNOT establish relevance!
+        if topical_q_stems:
+            has_topic_match = bool(topical_q_stems & s_stems) or bool(topical_q_words & s_words)
+        else:
+            has_topic_match = (len(q_stems & s_stems) > 0) or (len(q_words & s_words) > 0)
+
+        if not has_topic_match:
+            # Completely off-topic sentence: bounded strictly below min_sentence_score (0.15)
+            return float(min(0.05, 0.05 * max(0.0, chunk_similarity)))
+
+        # 3. Lexical and stem overlap ratios
         raw_overlap = len(q_words & s_words)
         raw_overlap_ratio = raw_overlap / len(q_words)
 
@@ -144,8 +219,12 @@ class ExtractiveQAEngine:
         stem_overlap_ratio = stem_overlap / len(q_stems)
         effective_overlap = max(raw_overlap_ratio, stem_overlap_ratio)
 
-        # 2. Sentence-level TF-IDF Cosine Similarity with stop words removed
-        # Generic words like 'what', 'is', 'the' must NEVER generate sentence similarity!
+        if topical_q_stems:
+            topical_stem_overlap = len(topical_q_stems & s_stems)
+            topical_overlap_ratio = topical_stem_overlap / len(topical_q_stems)
+            effective_overlap = max(effective_overlap, topical_overlap_ratio)
+
+        # 4. Sentence-level TF-IDF Cosine Similarity with stop words removed
         try:
             vec = TfidfVectorizer(ngram_range=(1, 2), stop_words="english").fit([sentence, question])
             q_vec = vec.transform([question])
@@ -154,33 +233,44 @@ class ExtractiveQAEngine:
         except Exception:
             tfidf_sim = 0.0
 
-        # 3. Strict Topical Grounding Gate:
-        # A candidate sentence MUST have at least one substantive matching content word or stem.
-        # Generic stop words (e.g. 'what', 'is', 'the') never satisfy this gate.
-        has_topic_match = (stem_overlap > 0) or (raw_overlap > 0)
-
-        if not has_topic_match:
-            # Off-topic sentence: bounded strictly below min_sentence_score (0.15)
-            return float(min(0.08, 0.08 * max(0.0, chunk_similarity)))
-
-        # 4. Informative / Answer-type heuristics (Strictly GATED on topical relevance)
-        bonus = 0.0
+        # 5. Polarity & Negation Alignment:
         q_lower = question.lower()
         s_lower = sentence.lower()
 
-        # Quantity / Numeric matching: "minimum", "how many", "percentage", etc.
+        is_neg_q = bool(q_words & NEGATION_TOKENS) or any(t in q_lower for t in PROHIBITION_TERMS) or "not " in q_lower
+        is_neg_s = bool(s_words & NEGATION_TOKENS) or any(t in s_lower for t in PROHIBITION_TERMS) or "not " in s_lower or "n't " in s_lower
+        is_pos_perm_s = any(re.search(rf"\b{p}\b", s_lower) for p in PERMISSION_TERMS) and not is_neg_s
+
+        bonus = 0.0
+        if is_neg_q:
+            # Question asks what is NOT allowed / prohibited
+            if is_pos_perm_s:
+                # Contradictory positive statement (e.g. 'calculators are permitted')
+                # Penalize heavily to prevent returning opposite factual answer
+                return 0.04
+            elif is_neg_s:
+                # Sentence discusses prohibitions/negation aligned with query intent
+                bonus += 0.20
+        else:
+            # Positive question: if sentence is strictly negative prohibition and query asked what is permitted
+            if is_neg_s and not is_pos_perm_s and any(p in q_lower for p in PERMISSION_TERMS):
+                effective_overlap *= 0.60
+
+        # 6. Quantity / Numeric Matching (Strictly gated on topic entity match and clean body number)
         has_quantity_q = any(
             w in q_lower
-            for w in ["minimum", "maximum", "how many", "how much", "percent", "percentage", "number", "rate", "fee", "cost"]
+            for w in ["minimum", "maximum", "how many", "how much", "percent", "percentage", "number", "rate", "fee", "cost", "total", "count", "amount"]
         )
-        has_quantity_s = bool(re.search(r"\b\d+(\.\d+)?%?\b|\b(percent|percentage)\b", s_lower))
-        if has_quantity_q and has_quantity_s:
-            bonus += 0.20
+        cleaned_sent = strip_leading_heading(sentence)
+        has_body_num = bool(re.search(r"\b\d+(\.\d+)?%?\b|\b(percent|percentage)\b", cleaned_sent.lower()))
 
-        # Definition matching: "what is", "define", "meaning of"
+        if has_quantity_q and has_body_num and has_topic_match:
+            bonus += 0.15 * max(effective_overlap, 0.5)
+
+        # 7. Definition Matching (Strictly gated on topic entity match)
         has_def_q = any(
             q_lower.startswith(prefix)
-            for prefix in ["what is", "what are", "define", "meaning of", "explain", "who is", "who are"]
+            for prefix in ["what is", "what are", "define", "meaning of", "explain", "who is", "who are", "describe"]
         )
         has_def_s = bool(
             re.search(
@@ -188,10 +278,8 @@ class ExtractiveQAEngine:
                 s_lower,
             )
         )
-        # Definition bonus applies ONLY if the sentence is defining one of the question's target stems
-        defines_target = has_def_s and bool(q_stems & s_stems)
-        if has_def_q and defines_target:
-            bonus += 0.15
+        if has_def_q and has_def_s and has_topic_match:
+            bonus += 0.15 * max(effective_overlap, 0.5)
 
         # Weighted aggregate score
         total_score = (

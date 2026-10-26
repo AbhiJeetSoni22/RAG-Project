@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+
+_NLTK_RESOURCES_READY: bool = False
+
+# Negation and polarity tokens that must be preserved when filtering stopwords for queries
+PRESERVED_POLARITY_WORDS: set[str] = {
+    "not", "no", "never", "neither", "nor", "without", "none"
+}
 
 
 class TextProcessingError(Exception):
@@ -18,7 +26,12 @@ def ensure_nltk_resources() -> None:
     """Ensure required NLTK datasets and tokenizers are downloaded.
 
     Downloads 'punkt', 'punkt_tab', and 'stopwords' if not already available.
+    Caches verification in memory to avoid repeated filesystem lookups.
     """
+    global _NLTK_RESOURCES_READY
+    if _NLTK_RESOURCES_READY:
+        return
+
     required_packages = ["punkt", "punkt_tab", "stopwords"]
     for pkg in required_packages:
         try:
@@ -30,26 +43,32 @@ def ensure_nltk_resources() -> None:
                 raise TextProcessingError(
                     f"Failed to download required NLTK resource '{pkg}': {exc}"
                 ) from exc
+    _NLTK_RESOURCES_READY = True
 
 
-def get_stopwords(language: str = "english") -> set[str]:
+def get_stopwords(language: str = "english", preserve_negations: bool = False) -> set[str]:
     """Retrieve the set of stop words for a given language.
 
     Args:
         language: Language for the stopwords corpus (default: 'english').
+        preserve_negations: If True, excludes negation tokens ('not', 'no', 'nor', etc.)
+                           from the stopwords set so questions retain polarity.
 
     Returns:
         A set of lowercase stop words.
     """
     ensure_nltk_resources()
     try:
-        return set(stopwords.words(language))
+        stops = set(stopwords.words(language))
+        if preserve_negations:
+            stops = stops - PRESERVED_POLARITY_WORDS
+        return stops
     except Exception as exc:
         raise TextProcessingError(f"Error loading stopwords for '{language}': {exc}") from exc
 
 
 def clean_text(text: str) -> str:
-    """Clean text by normalizing whitespace, newlines, and non-printable characters.
+    """Clean text by normalizing whitespace, newlines, ligatures, and non-printable characters.
 
     Keeps the original casing, vocabulary, and sentence structure intact.
 
@@ -62,8 +81,11 @@ def clean_text(text: str) -> str:
     if not text:
         return ""
 
+    # Normalize unicode ligatures and special characters (e.g. fi, fl, etc.)
+    cleaned = unicodedata.normalize("NFKD", text)
+
     # Replace null bytes, soft hyphens, and zero-width spaces
-    cleaned = text.replace("\x00", "").replace("\xad", "").replace("\u200b", "")
+    cleaned = cleaned.replace("\x00", "").replace("\xad", "").replace("\u200b", "")
 
     # Normalize non-breaking spaces and special horizontal whitespace to standard space
     cleaned = cleaned.replace("\xa0", " ").replace("\u202f", " ")

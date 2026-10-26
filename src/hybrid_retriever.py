@@ -157,6 +157,40 @@ class HybridRetriever:
         diff = max_val - min_val
         return [(s - min_val) / diff for s in scores]
 
+    @staticmethod
+    def _safe_normalize_candidate_scores(
+        raw_scores: dict[str, float],
+    ) -> dict[str, float]:
+        """Normalize candidate scores avoiding single-candidate inflation or division-by-zero.
+
+        If len(raw_scores) <= 1 or all scores are equal:
+            Preserves the raw scores bounded in [0.0, 1.0], preventing weak candidates
+            (e.g., 0.12) from being artificially inflated to 1.0.
+        When max_val > min_val:
+            Applies min-max scaling across the candidate pool into [0.0, 1.0].
+        """
+        if not raw_scores:
+            return {}
+
+        clean_scores: dict[str, float] = {}
+        for k, v in raw_scores.items():
+            try:
+                fv = float(v)
+                clean_scores[k] = fv if np.isfinite(fv) else 0.0
+            except (TypeError, ValueError):
+                clean_scores[k] = 0.0
+
+        vals = list(clean_scores.values())
+        min_val = min(vals)
+        max_val = max(vals)
+
+        if max_val == min_val:
+            # Preserve calibrated scores bounded in [0.0, 1.0] instead of inflating to 1.0
+            return {k: max(0.0, min(1.0, v)) for k, v in clean_scores.items()}
+
+        diff = max_val - min_val
+        return {k: max(0.0, min(1.0, (v - min_val) / diff)) for k, v in clean_scores.items()}
+
     def search(
         self,
         query: str,
@@ -171,10 +205,10 @@ class HybridRetriever:
         1. Query candidate retrieval from both TF-IDF and Semantic engines.
         2. Candidate union: pool unique chunks retrieved by either engine.
         3. Missing score handling: assign raw score 0.0 for candidates absent from an engine.
-        4. Deterministic min-max normalization across the candidate pool for both score channels.
+        4. Deterministic score normalization across candidate pool (preventing single-candidate inflation).
         5. Weighted score fusion: HybridScore = α * NormTFIDF + (1 - α) * NormSemantic.
         6. Relevance thresholding: filter chunks below min_similarity.
-        7. Final Top-K ranking by descending hybrid_score with metadata preservation.
+        7. Final Top-K ranking by descending hybrid_score with deterministic tie-breaking.
 
         Args:
             query: User's question string.
@@ -238,13 +272,15 @@ class HybridRetriever:
         for c in tfidf_candidates:
             cid = c["chunk_id"]
             candidate_pool[cid] = c.copy()
-            raw_tfidf[cid] = float(c.get("similarity_score", 0.0))
+            val = float(c.get("similarity_score", 0.0))
+            raw_tfidf[cid] = val if np.isfinite(val) else 0.0
 
         for c in semantic_candidates:
             cid = c["chunk_id"]
             if cid not in candidate_pool:
                 candidate_pool[cid] = c.copy()
-            raw_semantic[cid] = float(c.get("similarity_score", 0.0))
+            val = float(c.get("similarity_score", 0.0))
+            raw_semantic[cid] = val if np.isfinite(val) else 0.0
 
         # Assign 0.0 for candidates missing from either retriever's candidate set
         for cid in candidate_pool:
@@ -254,8 +290,8 @@ class HybridRetriever:
                 raw_semantic[cid] = 0.0
 
         # Step 4: Deterministic Min-Max Score Normalization across the candidate pool
-        norm_tfidf = self.normalize_scores(raw_tfidf)
-        norm_semantic = self.normalize_scores(raw_semantic)
+        norm_tfidf = self._safe_normalize_candidate_scores(raw_tfidf)
+        norm_semantic = self._safe_normalize_candidate_scores(raw_semantic)
 
         # Step 5 & 8: Weighted Fusion & Metadata Preservation
         scored_candidates: list[dict[str, Any]] = []
@@ -267,6 +303,7 @@ class HybridRetriever:
 
             # Weighted fusion formula
             hybrid_score = (eff_alpha * t_norm) + ((1.0 - eff_alpha) * s_norm)
+            hybrid_score = max(0.0, min(1.0, hybrid_score))
 
             # Step 7: Apply similarity threshold
             if hybrid_score < min_similarity:
@@ -283,12 +320,13 @@ class HybridRetriever:
             scored_candidates.append(chunk)
 
         # Sort descending by hybrid_score
-        # Tie-breaker: prefer higher semantic score, then higher tfidf score
+        # Tie-breaker: prefer higher semantic score, then higher tfidf score, then deterministic chunk_id
         scored_candidates.sort(
             key=lambda c: (
                 c["hybrid_score"],
                 c["semantic_score"],
                 c["tfidf_score"],
+                str(c.get("chunk_id", "")),
             ),
             reverse=True,
         )
