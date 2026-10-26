@@ -81,10 +81,10 @@ Raw TF-IDF and semantic similarity scores have distinct distributions and dynami
 
 $$\text{NormalizedScore}(c) = \frac{\text{Score}(c) - \min(\text{Scores})}{\max(\text{Scores}) - \min(\text{Scores})}$$
 
-**Division-by-Zero Handling:**
-When all candidates in the candidate pool have identical scores ($\max(\text{Scores}) == \min(\text{Scores})$):
-- If $\max(\text{Scores}) > 0$, the normalized score is set to `1.0` (all candidates have tied positive similarity).
-- If $\max(\text{Scores}) == 0$, the normalized score is set to `0.0`.
+**Single-Candidate & Division-by-Zero Handling:**
+To prevent artificial score inflation (where a weak single candidate with raw score e.g. 0.12 is inflated to 1.0 and bypasses relevance thresholds):
+- When candidate scores vary ($\max(\text{Scores}) > \min(\text{Scores})$), standard min-max normalization into $[0.0, 1.0]$ is applied across the retrieved pool.
+- When all candidates have identical scores or only one candidate exists ($\max(\text{Scores}) == \min(\text{Scores})$), scores preserve their calibrated cosine values bounded in $[0.0, 1.0]$ rather than being inflated to 1.0. This ensures that the user's `min_similarity` threshold functions reliably in Hybrid mode.
 
 ### 2. Candidate Union Strategy
 Rather than restricting evaluation to the intersection of candidate lists ($A \cap B$), the hybrid retriever pools the **union** of relevant candidates from both underlying retrieval engines ($A \cup B$):
@@ -280,11 +280,11 @@ To run individual test suites:
 python -m unittest tests/test_remediation_edge_cases.py   # Edge Case Remediation (20 tests)
 python -m unittest tests/test_qa_relevance_regression.py  # QA Relevance & Grounding (7 tests)
 python -m unittest tests/test_hybrid_retriever.py         # Phase 7 Hybrid (18 tests)
-python -m unittest tests/test_evaluator.py                # Phase 6 Evaluation (11 tests)
-python -m unittest tests/test_semantic_retriever.py       # Phase 5 Semantic (11 tests)
-python -m unittest tests/test_phase4.py                   # Phase 4 QA Engine (12 tests)
-python -m unittest tests/test_phase3.py                   # Phase 3 TF-IDF (10 tests)
-python -m unittest tests/test_phase2.py                   # Phase 2 Chunking (10 tests)
+python -m unittest tests/test_evaluator.py                # Phase 6 Evaluation (14 tests)
+python -m unittest tests/test_semantic_retriever.py       # Phase 5 Semantic (10 tests)
+python -m unittest tests/test_phase4.py                   # Phase 4 QA Engine (10 tests)
+python -m unittest tests/test_phase3.py                   # Phase 3 TF-IDF (11 tests)
+python -m unittest tests/test_phase2.py                   # Phase 2 Chunking (9 tests)
 python -m unittest tests/test_phase1.py                   # Phase 1 Ingestion (7 tests)
 ```
 
