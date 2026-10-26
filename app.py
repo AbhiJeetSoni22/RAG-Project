@@ -1240,6 +1240,82 @@ def render_sidebar() -> tuple[int, int, str, float, int, float, int]:
     return chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences
 
 
+def render_extracted_pages_inspection(processed_pages: list[dict[str, Any]]) -> None:
+    """Render the page-level inspection expander for extracted document pages.
+
+    Safely handles empty pages, single-page documents, and multi-page documents
+    without relying on uninitialized outer-scope variables.
+    """
+    with st.expander("🔍 View Extracted Pages (Page-Level Inspection)", expanded=False):
+        st.caption("Inspect the page-by-page extracted text, cleaned text, tokens, and stop-word filtered tokens.")
+
+        if not processed_pages:
+            st.info("ℹ️ No extracted pages are available for inspection.")
+            return
+
+        num_pages = len(processed_pages)
+        if num_pages > 1:
+            page_options = [f"Page {p['page']}" for p in processed_pages]
+            selected_page_str = st.selectbox("Select Page to Inspect", options=page_options, key="raw_page_select")
+            page_num_selected = int(selected_page_str.replace("Page ", ""))
+        else:
+            page_num_selected = processed_pages[0]["page"]
+
+        selected_page_data = next(
+            (p for p in processed_pages if p["page"] == page_num_selected),
+            processed_pages[0],
+        )
+
+        p_orig = selected_page_data.get("original_text", "")
+        p_cleaned = selected_page_data.get("cleaned_text", "")
+        p_tokens = selected_page_data.get("tokens", [])
+        p_filtered = selected_page_data.get("filtered_tokens", [])
+
+        if not p_cleaned.strip():
+            st.info(f"ℹ️ Page {page_num_selected} does not contain any extractable text.")
+        else:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Page Characters", len(p_orig))
+            c2.metric("Cleaned Chars", len(p_cleaned))
+            c3.metric("Tokens", len(p_tokens))
+            c4.metric("Filtered Tokens", len(p_filtered))
+
+            t1, t2, t3, t4 = st.tabs([
+                "📄 Original Text",
+                "🧹 Cleaned Text",
+                "🔤 Tokens",
+                "🎯 Filtered Tokens (Stopwords Removed)",
+            ])
+
+            with t1:
+                st.text_area(
+                    label="Original Text (as extracted from PDF)",
+                    value=p_orig,
+                    height=240,
+                    key=f"p1_orig_{page_num_selected}",
+                    disabled=True,
+                )
+
+            with t2:
+                st.text_area(
+                    label="Cleaned Text (normalized whitespace & lines)",
+                    value=p_cleaned,
+                    height=240,
+                    key=f"p1_cleaned_{page_num_selected}",
+                    disabled=True,
+                )
+
+            with t3:
+                st.caption(f"Total tokens on Page {page_num_selected}: **{len(p_tokens)}**")
+                chips_html = "".join([f'<span class="token-chip">{token}</span>' for token in p_tokens])
+                st.markdown(f'<div class="token-chip-container">{chips_html}</div>', unsafe_allow_html=True)
+
+            with t4:
+                st.caption(f"Total filtered tokens on Page {page_num_selected}: **{len(p_filtered)}** (English stop words excluded)")
+                chips_filtered_html = "".join([f'<span class="token-chip filtered">{token}</span>' for token in p_filtered])
+                st.markdown(f'<div class="token-chip-container">{chips_filtered_html}</div>', unsafe_allow_html=True)
+
+
 def main() -> None:
     """Main application loop."""
     chunk_size, chunk_overlap, retrieval_method, hybrid_alpha, top_k, min_similarity, max_sentences = render_sidebar()
@@ -1382,6 +1458,9 @@ def main() -> None:
             logger.error(f"Unexpected retriever error: {exc}", exc_info=True)
             st.error(f"❌ Failed to build retrieval engines: {exc}")
             return
+
+    # Authoritative page count derived safely from processed document pages
+    num_pages = len(processed_pages) if processed_pages else 0
 
     # Initialize Hybrid Retriever reusing existing instances with active hybrid_alpha
     hybrid_retriever = HybridRetriever(
@@ -2084,69 +2163,7 @@ def main() -> None:
                         )
 
     # Page-wise Raw Inspection
-    with st.expander("🔍 View Extracted Pages (Page-Level Inspection)", expanded=False):
-        st.caption("Inspect the page-by-page extracted text, cleaned text, tokens, and stop-word filtered tokens.")
-
-        if num_pages > 1:
-            page_options = [f"Page {p['page']}" for p in processed_pages]
-            selected_page_str = st.selectbox("Select Page to Inspect", options=page_options, key="raw_page_select")
-            page_num_selected = int(selected_page_str.replace("Page ", ""))
-        else:
-            page_num_selected = 1
-
-        selected_page_data = next(
-            (p for p in processed_pages if p["page"] == page_num_selected),
-            processed_pages[0],
-        )
-
-        p_orig = selected_page_data["original_text"]
-        p_cleaned = selected_page_data["cleaned_text"]
-        p_tokens = selected_page_data["tokens"]
-        p_filtered = selected_page_data["filtered_tokens"]
-
-        if not p_cleaned.strip():
-            st.info(f"ℹ️ Page {page_num_selected} does not contain any extractable text.")
-        else:
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Page Characters", len(p_orig))
-            c2.metric("Cleaned Chars", len(p_cleaned))
-            c3.metric("Tokens", len(p_tokens))
-            c4.metric("Filtered Tokens", len(p_filtered))
-
-            t1, t2, t3, t4 = st.tabs([
-                "📄 Original Text",
-                "🧹 Cleaned Text",
-                "🔤 Tokens",
-                "🎯 Filtered Tokens (Stopwords Removed)",
-            ])
-
-            with t1:
-                st.text_area(
-                    label="Original Text (as extracted from PDF)",
-                    value=p_orig,
-                    height=240,
-                    key=f"p1_orig_{page_num_selected}",
-                    disabled=True,
-                )
-
-            with t2:
-                st.text_area(
-                    label="Cleaned Text (normalized whitespace & lines)",
-                    value=p_cleaned,
-                    height=240,
-                    key=f"p1_cleaned_{page_num_selected}",
-                    disabled=True,
-                )
-
-            with t3:
-                st.caption(f"Total tokens on Page {page_num_selected}: **{len(p_tokens)}**")
-                chips_html = "".join([f'<span class="token-chip">{token}</span>' for token in p_tokens])
-                st.markdown(f'<div class="token-chip-container">{chips_html}</div>', unsafe_allow_html=True)
-
-            with t4:
-                st.caption(f"Total filtered tokens on Page {page_num_selected}: **{len(p_filtered)}** (English stop words excluded)")
-                chips_filtered_html = "".join([f'<span class="token-chip filtered">{token}</span>' for token in p_filtered])
-                st.markdown(f'<div class="token-chip-container">{chips_filtered_html}</div>', unsafe_allow_html=True)
+    render_extracted_pages_inspection(processed_pages)
 
 
 if __name__ == "__main__":
